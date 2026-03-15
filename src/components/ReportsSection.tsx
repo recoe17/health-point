@@ -317,26 +317,7 @@ export default function ReportsSection() {
                 </h2>
                 <p className="text-sm text-slate-200/80 mt-1">Cash flow &amp; transactions overview</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setImportModalOpen("daily");
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-900 bg-white hover:bg-slate-100 transition"
-                >
-                  Import
-                </button>
-                <svg
-                  className="w-6 h-6 text-slate-200 group-hover:text-white transition"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+              <div className="flex items-center gap-2" />
             </div>
             <div className="flex-1 space-y-2">
               {DAILY_ITEMS.map((item) => {
