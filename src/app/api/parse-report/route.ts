@@ -19,6 +19,15 @@ export async function POST(request: NextRequest) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
+    // For daily reports, prefer the sheet named "Monthly Transactions..." for Cash USD (I68) / Cash ZWG (I108)
+    const monthlySheetName = workbook.SheetNames.find((name) =>
+      name.toLowerCase().includes("monthly transactions")
+    );
+    const cashSheet =
+      reportType === "daily" && monthlySheetName
+        ? workbook.Sheets[monthlySheetName]
+        : sheet;
+
     if (!rows.length) {
       return NextResponse.json({ error: "File is empty" }, { status: 400 });
     }
@@ -54,10 +63,10 @@ export async function POST(request: NextRequest) {
         const cogs = parseNum(totalRow[4]) + parseNum(totalRow[6]);
 
         // Cash totals from combined USD / ZWG tables
-        const usdCell = (sheet as XLSX.WorkSheet)["I68"] as
+        const usdCell = (cashSheet as XLSX.WorkSheet)["I68"] as
           | XLSX.CellObject
           | undefined;
-        const zwgCell = (sheet as XLSX.WorkSheet)["I108"] as
+        const zwgCell = (cashSheet as XLSX.WorkSheet)["I108"] as
           | XLSX.CellObject
           | undefined;
         const cashUsd = usdCell ? parseNum(usdCell.v) : 0;
@@ -148,10 +157,10 @@ export async function POST(request: NextRequest) {
       if (field) parsed[field] = fmtNum(num);
     }
 
-    // For daily reports, always read Cash USD (I68) and Cash ZWG (I108) from the sheet
+    // For daily reports, always read Cash USD (I68) and Cash ZWG (I108) from the cash sheet
     if (reportType === "daily") {
-      const usdCell = sheet["I68"] as XLSX.CellObject | undefined;
-      const zwgCell = sheet["I108"] as XLSX.CellObject | undefined;
+      const usdCell = (cashSheet as XLSX.WorkSheet)["I68"] as XLSX.CellObject | undefined;
+      const zwgCell = (cashSheet as XLSX.WorkSheet)["I108"] as XLSX.CellObject | undefined;
       if (usdCell != null && (usdCell.v !== undefined && usdCell.v !== "")) {
         parsed["cash-usd"] = fmtNum(parseNum(usdCell.v));
       }
