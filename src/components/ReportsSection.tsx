@@ -206,7 +206,7 @@ const DAILY_ITEMS = [
 ];
 
 type DetailModalItem =
-  | (typeof MONTHLY_ITEMS)[0]
+  | (Omit<(typeof MONTHLY_ITEMS)[0], "chartData"> & { chartData?: { name: string; value: number }[] })
   | (Omit<(typeof DAILY_ITEMS)[0], "chartData"> & { chartData?: { name: string; value: number }[] });
 
 export default function ReportsSection() {
@@ -233,7 +233,7 @@ export default function ReportsSection() {
               : String(raw)
             : item.value;
       let items = item.items;
-      let chartData = item.chartData;
+      let chartData: { name: string; value: number }[] | undefined = item.chartData;
       if (item.id === "capex" && Array.isArray(importedMonthly.capexItems)) {
         items = importedMonthly.capexItems as { label: string; value: string }[];
         chartData = undefined;
@@ -541,12 +541,12 @@ export default function ReportsSection() {
         value="March 2025"
         description="Full monthly financial overview. Click individual metrics on the card for detailed breakdowns and charts. Use Import to upload Excel or CSV."
         items={[
-          { label: "Debtors", value: importedMonthly.debtors ?? "$245K" },
-          { label: "Creditors", value: importedMonthly.creditors ?? "$180K" },
-          { label: "Inventory", value: importedMonthly.inventory ?? "$420K" },
-          { label: "Capex", value: importedMonthly.capex ?? "$85K" },
-          { label: "Loan Movement", value: importedMonthly["loan-movement"] ?? "-$32K" },
-          { label: "Income Statement", value: importedMonthly["income-statement"] ?? "$520K" },
+          { label: "Debtors", value: (importedMonthly.debtors as string | undefined) ?? "$245K" },
+          { label: "Creditors", value: (importedMonthly.creditors as string | undefined) ?? "$180K" },
+          { label: "Inventory", value: (importedMonthly.inventory as string | undefined) ?? "$420K" },
+          { label: "Capex", value: (importedMonthly.capex as string | undefined) ?? "$85K" },
+          { label: "Loan Movement", value: (importedMonthly["loan-movement"] as string | undefined) ?? "-$32K" },
+          { label: "Income Statement", value: (importedMonthly["income-statement"] as string | undefined) ?? "$520K" },
         ]}
       />
 
