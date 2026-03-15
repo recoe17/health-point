@@ -118,6 +118,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Daily Revenue & COGS.xlsx: Revenue = column K (index 10), COGS = column E + G (indices 4, 6)
+    const isDailyRevenueCogsFile =
+      reportType === "daily" &&
+      (file.name.toLowerCase().includes("revenue") && file.name.toLowerCase().includes("cogs"));
+    if (isDailyRevenueCogsFile && rows.length > 0) {
+      const totalRow = rows.find((r) => {
+        const label = String((r as unknown[])[0] ?? (r as unknown[])[1] ?? "").trim().toLowerCase();
+        return label === "total" || label === "total:";
+      }) as unknown[] | undefined;
+      if (totalRow && totalRow.length >= 11) {
+        const revenue = parseNum(totalRow[10]);
+        const cogs = parseNum(totalRow[4]) + parseNum(totalRow[6]);
+        return NextResponse.json({
+          revenue: fmt(revenue),
+          cogs: fmt(cogs),
+        });
+      }
+    }
+
     // HealthPoint Daily Revenue format (RptManagementRevenueAll)
     const isHealthPointDaily =
       reportType === "daily" &&
