@@ -33,18 +33,39 @@ export async function POST(request: NextRequest) {
       Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
 
     // HealthPoint Daily Revenue format (RptManagementRevenueAll)
-    const isHealthPointDaily = reportType === "daily" && rows.some(
-      (r) => String((r as unknown[])[0] ?? "").toLowerCase().includes("rptmanagement") ||
-        String((r as unknown[])[1] ?? "").toLowerCase().includes("revenue per location")
-    );
+    const isHealthPointDaily =
+      reportType === "daily" &&
+      rows.some(
+        (r) =>
+          String((r as unknown[])[0] ?? "")
+            .toLowerCase()
+            .includes("rptmanagement") ||
+          String((r as unknown[])[1] ?? "")
+            .toLowerCase()
+            .includes("revenue per location")
+      );
     if (isHealthPointDaily) {
-      const totalRow = rows.find((r) =>
-        String((r as unknown[])[0] ?? "").trim().toLowerCase() === "total:"
+      const totalRow = rows.find(
+        (r) =>
+          String((r as unknown[])[0] ?? "").trim().toLowerCase() === "total:"
       ) as unknown[] | undefined;
       if (totalRow && totalRow.length >= 10) {
         const revenue = parseNum(totalRow[9]);
         const cogs = parseNum(totalRow[4]) + parseNum(totalRow[6]);
+
+        // Cash totals from combined USD / ZWG tables
+        const usdCell = (sheet as XLSX.WorkSheet)["I68"] as
+          | XLSX.CellObject
+          | undefined;
+        const zwgCell = (sheet as XLSX.WorkSheet)["I108"] as
+          | XLSX.CellObject
+          | undefined;
+        const cashUsd = usdCell ? parseNum(usdCell.v) : 0;
+        const cashZwg = zwgCell ? parseNum(zwgCell.v) : 0;
+
         return NextResponse.json({
+          "cash-usd": fmt(cashUsd),
+          "cash-zwg": fmt(cashZwg),
           revenue: fmt(revenue),
           cogs: fmt(cogs),
         });
