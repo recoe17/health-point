@@ -93,11 +93,40 @@ export async function POST(request: NextRequest) {
         const cashUsd = usdCell ? parseNum(usdCell.v) : 0;
         const cashZwg = zwgCell ? parseNum(zwgCell.v) : 0;
 
+        const cashRows = XLSX.utils.sheet_to_json<unknown[]>(cashSheet as XLSX.WorkSheet, { header: 1 }) as unknown[][];
+        const colI = 8;
+        const colA = 0;
+        const colB = 1;
+        const skipLabels = new Set(["total", "subtotal", "grand total", ""]);
+        const toBankRow = (row: unknown[]): { name: string; value: string } | null => {
+          const amount = parseNum(row[colI]);
+          if (amount === 0) return null;
+          const label = String(row[colA] ?? row[colB] ?? "").trim();
+          if (!label || skipLabels.has(label.toLowerCase())) return null;
+          return { name: label, value: fmt(amount) };
+        };
+        const cashUsdBanks: { name: string; value: string }[] = [];
+        for (let r = 0; r < Math.min(67, cashRows.length); r++) {
+          const row = cashRows[r];
+          if (!Array.isArray(row)) continue;
+          const bank = toBankRow(row);
+          if (bank) cashUsdBanks.push(bank);
+        }
+        const cashZwgBanks: { name: string; value: string }[] = [];
+        for (let r = 69; r < Math.min(107, cashRows.length); r++) {
+          const row = cashRows[r];
+          if (!Array.isArray(row)) continue;
+          const bank = toBankRow(row);
+          if (bank) cashZwgBanks.push(bank);
+        }
+
         return NextResponse.json({
           "cash-usd": fmt(cashUsd),
           "cash-zwg": fmt(cashZwg),
           revenue: fmt(revenue),
           cogs: fmt(cogs),
+          cashUsdBanks,
+          cashZwgBanks,
         });
       }
     }
@@ -181,12 +210,41 @@ export async function POST(request: NextRequest) {
       if (field) parsed[field] = fmtNum(num);
     }
 
-    // For daily: always set Cash USD (I68) and Cash ZWG (I108) from the chosen sheet so any uploaded file works
+    // For daily: set Cash USD/ZWG and extract bank breakdown from the cash sheet
     if (reportType === "daily") {
       const usdCell = (cashSheet as XLSX.WorkSheet)["I68"] as XLSX.CellObject | undefined;
       const zwgCell = (cashSheet as XLSX.WorkSheet)["I108"] as XLSX.CellObject | undefined;
       parsed["cash-usd"] = fmtNum(parseNum(usdCell?.v ?? 0));
       parsed["cash-zwg"] = fmtNum(parseNum(zwgCell?.v ?? 0));
+
+      const cashRows = XLSX.utils.sheet_to_json<unknown[]>(cashSheet as XLSX.WorkSheet, { header: 1 }) as unknown[][];
+      const colI = 8;
+      const colA = 0;
+      const colB = 1;
+      const skipLabels = new Set(["total", "subtotal", "grand total", ""]);
+      const toBankRow = (row: unknown[], rowIndex: number): { name: string; value: string } | null => {
+        const amount = parseNum(row[colI]);
+        if (amount === 0) return null;
+        const label = String(row[colA] ?? row[colB] ?? "").trim();
+        if (!label || skipLabels.has(label.toLowerCase())) return null;
+        return { name: label, value: fmtNum(amount) };
+      };
+      const cashUsdBanks: { name: string; value: string }[] = [];
+      for (let r = 0; r < Math.min(67, cashRows.length); r++) {
+        const row = cashRows[r];
+        if (!Array.isArray(row)) continue;
+        const bank = toBankRow(row, r);
+        if (bank) cashUsdBanks.push(bank);
+      }
+      const cashZwgBanks: { name: string; value: string }[] = [];
+      for (let r = 69; r < Math.min(107, cashRows.length); r++) {
+        const row = cashRows[r];
+        if (!Array.isArray(row)) continue;
+        const bank = toBankRow(row, r);
+        if (bank) cashZwgBanks.push(bank);
+      }
+      (parsed as Record<string, unknown>)["cashUsdBanks"] = cashUsdBanks;
+      (parsed as Record<string, unknown>)["cashZwgBanks"] = cashZwgBanks;
     }
 
     return NextResponse.json(parsed);

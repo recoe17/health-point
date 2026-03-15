@@ -8,7 +8,7 @@ interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   reportType: ReportType;
-  onImport: (data: Record<string, string>) => void;
+  onImport: (data: Record<string, unknown>) => void;
 }
 
 const ACCEPT = ".csv,.xlsx,.xls";
@@ -27,7 +27,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [parsedData, setParsedData] = useState<Record<string, string> | null>(null);
+  const [parsedData, setParsedData] = useState<Record<string, unknown> | null>(null);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -59,14 +59,17 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
     setError(null);
     setParsedData(null);
     try {
-      const parsed = await parseFile(file, reportType);
-      const data: Record<string, string> = {};
-      const keys = FIELD_KEYS[reportType];
-      for (const k of keys) {
-        const v = (parsed as Record<string, string>)[k];
-        if (v) data[k] = v;
+      const parsed = await parseFile(file, reportType) as Record<string, unknown>;
+      if (reportType === "daily") {
+        setParsedData(parsed);
+      } else {
+        const data: Record<string, unknown> = {};
+        for (const k of FIELD_KEYS[reportType]) {
+          const v = parsed[k];
+          if (v) data[k] = v;
+        }
+        setParsedData(data);
       }
-      setParsedData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to parse file. Ensure headers match: " + LABELS[reportType].join(", "));
     } finally {
@@ -170,12 +173,18 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
             <div className="rounded-lg border border-red-500/40 bg-red-500/5 p-4">
               <p className="text-sm font-medium text-red-400 mb-3">Preview — click Update to show latest on dashboard</p>
               <div className="space-y-2 text-sm">
-                {Object.entries(parsedData).map(([key, val]) => (
-                  <div key={key} className="flex justify-between text-slate-300">
-                    <span className="capitalize">{key.replace(/-/g, " ")}</span>
-                    <span className="font-semibold text-slate-100">{val}</span>
-                  </div>
-                ))}
+                {Object.entries(parsedData)
+                  .filter(([, val]) => typeof val === "string" || (Array.isArray(val) && val.length > 0))
+                  .map(([key, val]) => (
+                    <div key={key} className="flex justify-between text-slate-300">
+                      <span className="capitalize">{key.replace(/-/g, " ")}</span>
+                      <span className="font-semibold text-slate-100">
+                        {Array.isArray(val)
+                          ? `${(val as { name: string; value: string }[]).length} bank(s)`
+                          : String(val)}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           )}

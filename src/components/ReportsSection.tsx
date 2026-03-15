@@ -211,7 +211,7 @@ export default function ReportsSection() {
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily" | null>(null);
   const [importedMonthly, setImportedMonthly] = useState<Record<string, string>>({});
-  const [importedDaily, setImportedDaily] = useState<Record<string, string>>({});
+  const [importedDaily, setImportedDaily] = useState<Record<string, unknown>>({});
 
   const openMetricDetail = (item: typeof MONTHLY_ITEMS[0] | typeof DAILY_ITEMS[0]) => {
     setModalItem(item);
@@ -226,10 +226,16 @@ export default function ReportsSection() {
   );
 
   const mergeDailyItem = useCallback(
-    (item: (typeof DAILY_ITEMS)[0]) => ({
-      ...item,
-      value: importedDaily[item.id] ?? item.value,
-    }),
+    (item: (typeof DAILY_ITEMS)[0]) => {
+      const value = (importedDaily[item.id] as string | undefined) ?? item.value;
+      let items = item.items;
+      if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
+        items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
+      } else if (item.id === "cash-zwg" && Array.isArray(importedDaily.cashZwgBanks) && importedDaily.cashZwgBanks.length > 0) {
+        items = (importedDaily.cashZwgBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
+      }
+      return { ...item, value, items };
+    },
     [importedDaily]
   );
 
@@ -243,8 +249,8 @@ export default function ReportsSection() {
     });
   }, []);
 
-  const handleImportMonthly = useCallback(async (data: Record<string, string>) => {
-    setImportedMonthly(data);
+  const handleImportMonthly = useCallback(async (data: Record<string, unknown>) => {
+    setImportedMonthly(data as Record<string, string>);
     try {
       await fetch("/api/reports", {
         method: "POST",
@@ -256,7 +262,7 @@ export default function ReportsSection() {
     }
   }, []);
 
-  const handleImportDaily = useCallback(async (data: Record<string, string>) => {
+  const handleImportDaily = useCallback(async (data: Record<string, unknown>) => {
     setImportedDaily(data);
     try {
       await fetch("/api/reports", {
@@ -409,10 +415,10 @@ export default function ReportsSection() {
         value="Today"
         description="Daily financial snapshot. Click individual metrics on the card for detailed breakdowns and charts. Use Import to upload Excel or CSV."
         items={[
-          { label: "Cash (USD)", value: importedDaily["cash-usd"] ?? "$820K" },
-          { label: "Cash (ZWG)", value: importedDaily["cash-zwg"] ?? "ZWG 380K" },
-          { label: "Revenue", value: importedDaily.revenue ?? "$78.5K" },
-          { label: "COGS", value: importedDaily.cogs ?? "$29.8K" },
+          { label: "Cash (USD)", value: (importedDaily["cash-usd"] as string) ?? "$820K" },
+          { label: "Cash (ZWG)", value: (importedDaily["cash-zwg"] as string) ?? "ZWG 380K" },
+          { label: "Revenue", value: (importedDaily.revenue as string) ?? "$78.5K" },
+          { label: "COGS", value: (importedDaily.cogs as string) ?? "$29.8K" },
         ]}
       />
 
