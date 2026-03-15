@@ -214,7 +214,7 @@ export default function ReportsSection() {
   const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily-cash" | "daily-revenue-cogs" | null>(null);
-  const [importedMonthly, setImportedMonthly] = useState<Record<string, string>>({});
+  const [importedMonthly, setImportedMonthly] = useState<Record<string, unknown>>({});
   const [importedDaily, setImportedDaily] = useState<Record<string, unknown>>({});
 
   const openMetricDetail = (item: DetailModalItem) => {
@@ -222,10 +222,30 @@ export default function ReportsSection() {
   };
 
   const mergeMonthlyItem = useCallback(
-    (item: (typeof MONTHLY_ITEMS)[0]) => ({
-      ...item,
-      value: importedMonthly[item.id] ?? item.value,
-    }),
+    (item: (typeof MONTHLY_ITEMS)[0]) => {
+      const raw = importedMonthly[item.id];
+      const value =
+        item.id === "income-statement"
+          ? "—"
+          : raw !== undefined && raw !== null
+            ? typeof raw === "number"
+              ? `$${raw.toLocaleString()}`
+              : String(raw)
+            : item.value;
+      let items = item.items;
+      let chartData = item.chartData;
+      if (item.id === "capex" && Array.isArray(importedMonthly.capexItems)) {
+        items = importedMonthly.capexItems as { label: string; value: string }[];
+        chartData = undefined;
+      } else if (item.id === "loan-movement" && Array.isArray(importedMonthly.loanMovementItems)) {
+        items = importedMonthly.loanMovementItems as { label: string; value: string }[];
+        chartData = undefined;
+      } else if (item.id === "income-statement" && Array.isArray(importedMonthly.incomeStatementItems)) {
+        items = importedMonthly.incomeStatementItems as { label: string; value: string }[];
+        chartData = undefined;
+      }
+      return { ...item, value, items, chartData };
+    },
     [importedMonthly]
   );
 
@@ -267,14 +287,14 @@ export default function ReportsSection() {
 
   useEffect(() => {
     const load = async () => {
-      let monthly: Record<string, string> = {};
+      let monthly: Record<string, unknown> = {};
       let daily: Record<string, unknown> = {};
       try {
         const [monthlyRes, dailyRes] = await Promise.all([
           fetch("/api/reports?type=monthly").then((r) => (r.ok ? r.json() : {})),
           fetch("/api/reports?type=daily").then((r) => (r.ok ? r.json() : {})),
         ]);
-        monthly = (monthlyRes && typeof monthlyRes === "object") ? (monthlyRes as Record<string, string>) : {};
+        monthly = (monthlyRes && typeof monthlyRes === "object") ? (monthlyRes as Record<string, unknown>) : {};
         daily = (dailyRes && typeof dailyRes === "object") ? (dailyRes as Record<string, unknown>) : {};
       } catch {
         // continue to localStorage fallback
@@ -284,7 +304,7 @@ export default function ReportsSection() {
           const storedMonthly = localStorage.getItem("healthpoint-monthly");
           const storedDaily = localStorage.getItem("healthpoint-daily");
           if (!Object.keys(monthly).length && storedMonthly) {
-            const parsed = JSON.parse(storedMonthly) as Record<string, string>;
+            const parsed = JSON.parse(storedMonthly) as Record<string, unknown>;
             if (Object.keys(parsed).length) monthly = parsed;
           }
           if (!Object.keys(daily).length && storedDaily) {
@@ -302,7 +322,7 @@ export default function ReportsSection() {
   }, []);
 
   const handleImportMonthly = useCallback(async (data: Record<string, unknown>) => {
-    setImportedMonthly(data as Record<string, string>);
+    setImportedMonthly(data);
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("healthpoint-monthly", JSON.stringify(data));

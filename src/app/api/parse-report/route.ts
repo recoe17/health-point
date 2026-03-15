@@ -103,6 +103,71 @@ export async function POST(request: NextRequest) {
     const fmt = (n: number) =>
       Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
 
+    // Monthly report: e.g. "HealthPoint Financial Statements - February 2026.xlsx"
+    // Sheets: Financial Positions, CAPEX, Indirect Cashflow, YTD Summarised P&L
+    if (reportType === "monthly") {
+      const findSheet = (name: string) =>
+        workbook.SheetNames.find((n) => n.toLowerCase().includes(name.toLowerCase()));
+      const getCellFmt = (ws: XLSX.WorkSheet, ref: string) =>
+        fmt(parseNum((ws[ref] as XLSX.CellObject | undefined)?.v ?? 0));
+      const getCellLabel = (ws: XLSX.WorkSheet, ref: string): string =>
+        String((ws[ref] as XLSX.CellObject | undefined)?.v ?? "").trim();
+
+      const fpSheet = findSheet("Financial Positions");
+      const capexSheet = findSheet("CAPEX");
+      const cashflowSheet = findSheet("Indirect Cashflow");
+      const ytdSheet = findSheet("YTD Summarised P&L") ?? findSheet("YTD");
+
+      const monthlyParsed: Record<string, unknown> = {};
+      if (fpSheet) {
+        const ws = workbook.Sheets[fpSheet] as XLSX.WorkSheet;
+        monthlyParsed.debtors = getCellFmt(ws, "D18");
+        monthlyParsed.creditors = getCellFmt(ws, "D41");
+        monthlyParsed.inventory = getCellFmt(ws, "D17");
+      }
+      if (capexSheet) {
+        const ws = workbook.Sheets[capexSheet] as XLSX.WorkSheet;
+        monthlyParsed.capex = getCellFmt(ws, "C225");
+        const capexItems: { label: string; value: string }[] = [];
+        for (let r = 229; r <= 233; r++) {
+          const label = getCellLabel(ws, `B${r}`);
+          const val = getCellFmt(ws, `C${r}`);
+          capexItems.push({ label: label || `Row ${r}`, value: val });
+        }
+        monthlyParsed.capexItems = capexItems;
+      }
+      if (cashflowSheet) {
+        const ws = workbook.Sheets[cashflowSheet] as XLSX.WorkSheet;
+        monthlyParsed["loan-movement"] = getCellFmt(ws, "F49");
+        const loanMovementItems: { label: string; value: string }[] = [];
+        for (let r = 39; r <= 47; r++) {
+          const label = getCellLabel(ws, `B${r}`);
+          const val = getCellFmt(ws, `F${r}`);
+          loanMovementItems.push({ label: label || `Row ${r}`, value: val });
+        }
+        monthlyParsed.loanMovementItems = loanMovementItems;
+      }
+      if (ytdSheet) {
+        const ws = workbook.Sheets[ytdSheet] as XLSX.WorkSheet;
+        const revenue = getCellFmt(ws, "P8");
+        const grossProfit = getCellFmt(ws, "P23");
+        const operationalProfit = getCellFmt(ws, "P41");
+        const profitBeforeTax = getCellFmt(ws, "P48");
+        const netProfit = getCellFmt(ws, "P52");
+        monthlyParsed["income-statement"] = netProfit;
+        monthlyParsed.incomeStatementItems = [
+          { label: "Revenue", value: revenue },
+          { label: "Gross Profit", value: grossProfit },
+          { label: "Operational Profit", value: operationalProfit },
+          { label: "Profit Before Tax", value: profitBeforeTax },
+          { label: "Net Profit", value: netProfit },
+        ];
+      }
+      if (Object.keys(monthlyParsed).length > 0) {
+        return NextResponse.json(monthlyParsed);
+      }
+    }
+
     // If we didn't find "Monthly Transactions" by name, pick the sheet where I68 is LARGEST
     // (main totals sheet has ~122K USD; other sheets have smaller values like 100K)
     if (reportType === "daily" && !monthlySheetName) {

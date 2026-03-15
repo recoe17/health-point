@@ -85,12 +85,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
       } else if (reportType === "daily") {
         setParsedData(parsed);
       } else {
-        const data: Record<string, unknown> = {};
-        for (const k of FIELD_KEYS[reportType]) {
-          const v = parsed[k];
-          if (v) data[k] = v;
-        }
-        setParsedData(data);
+        setParsedData(parsed);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to parse file. Ensure headers match: " + LABELS[reportType].join(", "));
