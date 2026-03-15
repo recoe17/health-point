@@ -64,7 +64,10 @@ export async function POST(request: NextRequest) {
       "net profit": "income-statement",
     };
     const DAILY_MAP: Record<string, string> = {
-      cash: "cash",
+      "cash usd": "cash-usd",
+      "cash (usd)": "cash-usd",
+      "cash zwg": "cash-zwg",
+      "cash (zwg)": "cash-zwg",
       revenue: "revenue",
       sales: "revenue",
       cogs: "cogs",

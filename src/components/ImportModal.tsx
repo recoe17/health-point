@@ -14,12 +14,12 @@ interface ImportModalProps {
 const ACCEPT = ".csv,.xlsx,.xls";
 const LABELS: Record<ReportType, string[]> = {
   monthly: ["Debtors", "Creditors", "Inventory", "Capex", "Loan Movement", "Income Statement"],
-  daily: ["Cash", "Revenue", "COGS"],
+  daily: ["Cash USD", "Cash ZWG", "Revenue", "COGS"],
 };
 
 const FIELD_KEYS: Record<ReportType, string[]> = {
   monthly: ["debtors", "creditors", "inventory", "capex", "loan-movement", "income-statement"],
-  daily: ["cash", "revenue", "cogs"],
+  daily: ["cash-usd", "cash-zwg", "revenue", "cogs"],
 };
 
 export default function ImportModal({ isOpen, onClose, reportType, onImport }: ImportModalProps) {

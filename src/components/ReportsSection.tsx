@@ -330,31 +330,57 @@ export default function ReportsSection() {
             onClick={() => setDailyModalOpen(true)}
             className="text-left rounded-2xl border border-slate-900 bg-slate-900 p-6 md:p-8 shadow-md transition hover:shadow-lg hover:-translate-y-0.5 min-h-[200px] flex flex-col cursor-pointer group text-white"
           >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold tracking-tight group-hover:text-white transition">
-                  Daily Reports
-                </h2>
-                <p className="text-sm text-slate-200/80 mt-1">Cash flow &amp; transactions overview</p>
-              </div>
-              <div className="flex items-center gap-2" />
+            <div className="mb-4">
+              <h2 className="text-xl font-bold tracking-tight group-hover:text-white transition">
+                Daily Reports
+              </h2>
+              <p className="text-sm text-slate-200/80 mt-1">Cash flow &amp; transactions overview</p>
             </div>
-            <div className="flex-1 space-y-2">
-              {DAILY_ITEMS.map((item) => {
-                const merged = mergeDailyItem(item);
-                return (
-                  <MetricCard
-                    key={item.id}
-                    label={merged.label}
-                    value={merged.value}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openMetricDetail(merged);
-                    }}
-                    accentColor="text-white"
-                  />
-                );
-              })}
+            <div className="flex-1 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {DAILY_ITEMS.filter((i) => i.id === "cash-usd" || i.id === "cash-zwg").map((item) => {
+                  const merged = mergeDailyItem(item);
+                  return (
+                    <MetricCard
+                      key={item.id}
+                      label={merged.label}
+                      value={merged.value}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMetricDetail(merged);
+                      }}
+                      accentColor="text-white"
+                    />
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImportModalOpen("daily");
+                }}
+                className="w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition"
+              >
+                Import (update Cash USD / Cash ZWG)
+              </button>
+              <div className="space-y-2">
+                {DAILY_ITEMS.filter((i) => i.id !== "cash-usd" && i.id !== "cash-zwg").map((item) => {
+                  const merged = mergeDailyItem(item);
+                  return (
+                    <MetricCard
+                      key={item.id}
+                      label={merged.label}
+                      value={merged.value}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMetricDetail(merged);
+                      }}
+                      accentColor="text-white"
+                    />
+                  );
+                })}
+              </div>
             </div>
           </button>
         </div>
@@ -383,7 +409,8 @@ export default function ReportsSection() {
         value="Today"
         description="Daily financial snapshot. Click individual metrics on the card for detailed breakdowns and charts. Use Import to upload Excel or CSV."
         items={[
-          { label: "Cash", value: importedDaily.cash ?? "$1.2M" },
+          { label: "Cash (USD)", value: importedDaily["cash-usd"] ?? "$820K" },
+          { label: "Cash (ZWG)", value: importedDaily["cash-zwg"] ?? "ZWG 380K" },
           { label: "Revenue", value: importedDaily.revenue ?? "$78.5K" },
           { label: "COGS", value: importedDaily.cogs ?? "$29.8K" },
         ]}
