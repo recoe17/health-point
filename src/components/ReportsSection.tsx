@@ -229,12 +229,13 @@ export default function ReportsSection() {
     (item: (typeof DAILY_ITEMS)[0]) => {
       const value = (importedDaily[item.id] as string | undefined) ?? item.value;
       let items = item.items;
+      const isCash = item.id === "cash-usd" || item.id === "cash-zwg";
       if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
         items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
       } else if (item.id === "cash-zwg" && Array.isArray(importedDaily.cashZwgBanks) && importedDaily.cashZwgBanks.length > 0) {
         items = (importedDaily.cashZwgBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
       }
-      return { ...item, value, items };
+      return { ...item, value, items, ...(isCash ? { chartData: undefined } : {}) };
     },
     [importedDaily]
   );
