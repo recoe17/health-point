@@ -207,7 +207,7 @@ const DAILY_ITEMS = [
 
 type DetailModalItem =
   | (typeof MONTHLY_ITEMS)[0]
-  | ((typeof DAILY_ITEMS)[0] & { chartData?: { name: string; value: number }[] });
+  | (Omit<(typeof DAILY_ITEMS)[0], "chartData"> & { chartData?: { name: string; value: number }[] });
 
 export default function ReportsSection() {
   const [modalItem, setModalItem] = useState<DetailModalItem | null>(null);
