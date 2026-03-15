@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
 const COL_I = 8;
-const COL_A = 0;
-const COL_B = 1;
 
 /** Line-item labels under each bank section (not section headers). When we see "Total", use col I as that section's total. */
 const SECTION_LINE_LABELS = new Set([
@@ -11,6 +9,22 @@ const SECTION_LINE_LABELS = new Set([
   "b/bfwd", "receipts", "transfer", "payments",
   "security deposit and prepayments", "security deposit", "prepayments",
 ]);
+
+/** First non-empty string from row columns 0..3 (A–D) */
+function getRowLabel(row: unknown[]): string {
+  for (let c = 0; c <= 3; c++) {
+    const v = row[c];
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+/** True if this row is a "Total" row (label in A–D is "Total" or "Total:") */
+function isTotalRow(row: unknown[]): boolean {
+  const label = getRowLabel(row).toLowerCase();
+  return label === "total" || label.startsWith("total:");
+}
 
 function extractBankBreakdownBySections(
   cashRows: unknown[][],
@@ -23,10 +37,10 @@ function extractBankBreakdownBySections(
     for (let r = start; r < Math.min(end, cashRows.length); r++) {
       const row = cashRows[r];
       if (!Array.isArray(row)) continue;
-      const label = String(row[COL_A] ?? row[COL_B] ?? "").trim();
+      const label = getRowLabel(row);
       const normalized = label.toLowerCase();
       const amount = parseNum(row[COL_I]);
-      if (normalized === "total") {
+      if (isTotalRow(row)) {
         if (currentSection) {
           list.push({ name: currentSection, value: fmt(amount) });
         }
