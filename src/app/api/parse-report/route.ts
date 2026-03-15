@@ -19,33 +19,22 @@ export async function POST(request: NextRequest) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
-    // For daily reports, choose the sheet that actually holds the cash totals (I68 / I108).
+    // For daily reports, choose the sheet that holds the real cash totals (I68 / I108).
     // 1) Prefer a sheet whose name contains "monthly transactions"
-    // 2) Otherwise, scan all sheets and pick the first one where I68 or I108 has a value
+    // 2) Otherwise, use the sheet where I68 is LARGEST (main totals sheet has ~122K; summary sheets have smaller values)
     let cashSheet: XLSX.WorkSheet = sheet;
+    let monthlySheetName: string | undefined;
     if (reportType === "daily") {
-      const monthlySheetName = workbook.SheetNames.find((name) =>
+      monthlySheetName = workbook.SheetNames.find((name) =>
         name.toLowerCase().includes("monthly transactions")
       );
       if (monthlySheetName) {
         cashSheet = workbook.Sheets[monthlySheetName];
-      } else {
-        for (const name of workbook.SheetNames) {
-          const ws = workbook.Sheets[name] as XLSX.WorkSheet;
-          const usdCell = ws["I68"] as XLSX.CellObject | undefined;
-          const zwgCell = ws["I108"] as XLSX.CellObject | undefined;
-          if (
-            (usdCell && usdCell.v !== undefined && usdCell.v !== "") ||
-            (zwgCell && zwgCell.v !== undefined && zwgCell.v !== "")
-          ) {
-            cashSheet = ws;
-            break;
-          }
-        }
       }
     }
 
-    if (!rows.length) {
+    // For monthly we require content; for daily we accept any file and read I68/I108
+    if (!rows.length && reportType === "monthly") {
       return NextResponse.json({ error: "File is empty" }, { status: 400 });
     }
 
@@ -57,6 +46,21 @@ export async function POST(request: NextRequest) {
     };
     const fmt = (n: number) =>
       Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
+
+    // If we didn't find "Monthly Transactions" by name, pick the sheet where I68 is LARGEST
+    // (main totals sheet has ~122K USD; other sheets have smaller values like 100K)
+    if (reportType === "daily" && !monthlySheetName) {
+      let bestI68 = -1;
+      for (const name of workbook.SheetNames) {
+        const ws = workbook.Sheets[name] as XLSX.WorkSheet;
+        const usdCell = ws["I68"] as XLSX.CellObject | undefined;
+        const v = usdCell?.v != null ? parseNum(usdCell.v) : -1;
+        if (v > bestI68) {
+          bestI68 = v;
+          cashSheet = ws;
+        }
+      }
+    }
 
     // HealthPoint Daily Revenue format (RptManagementRevenueAll)
     const isHealthPointDaily =
@@ -144,27 +148,30 @@ export async function POST(request: NextRequest) {
       return null;
     };
 
-    const firstRow = rows[0] as unknown[];
-    const secondNum = parseNumNullable(firstRow[1]);
-    const isKeyValue =
-      firstRow.length >= 2 &&
-      typeof firstRow[0] === "string" &&
-      secondNum !== null;
-
     const raw: Record<string, number> = {};
-    if (isKeyValue) {
-      for (const row of rows as unknown[][]) {
-        const key = norm(row[0]);
-        const val = parseNumNullable(row[1]);
-        if (key && val !== null) raw[key] = val;
+    if (rows.length >= 1) {
+      const firstRow = rows[0] as unknown[];
+      const secondNum = parseNumNullable(firstRow?.[1]);
+      const isKeyValue =
+        Array.isArray(firstRow) &&
+        firstRow.length >= 2 &&
+        typeof firstRow[0] === "string" &&
+        secondNum !== null;
+
+      if (isKeyValue) {
+        for (const row of rows as unknown[][]) {
+          const key = norm(row[0]);
+          const val = parseNumNullable(row[1]);
+          if (key && val !== null) raw[key] = val;
+        }
+      } else if (rows.length >= 2) {
+        const headers = (rows[0] as unknown[]).map((h) => norm(h));
+        const dataRow = rows[1] as unknown[];
+        headers.forEach((h, i) => {
+          const val = parseNumNullable(dataRow[i]);
+          if (h && val !== null) raw[h] = val;
+        });
       }
-    } else if (rows.length >= 2) {
-      const headers = (rows[0] as unknown[]).map((h) => norm(h));
-      const dataRow = rows[1] as unknown[];
-      headers.forEach((h, i) => {
-        const val = parseNumNullable(dataRow[i]);
-        if (h && val !== null) raw[h] = val;
-      });
     }
 
     const map = reportType === "monthly" ? MONTHLY_MAP : DAILY_MAP;
@@ -174,16 +181,12 @@ export async function POST(request: NextRequest) {
       if (field) parsed[field] = fmtNum(num);
     }
 
-    // For daily reports, always read Cash USD (I68) and Cash ZWG (I108) from the cash sheet
+    // For daily: always set Cash USD (I68) and Cash ZWG (I108) from the chosen sheet so any uploaded file works
     if (reportType === "daily") {
       const usdCell = (cashSheet as XLSX.WorkSheet)["I68"] as XLSX.CellObject | undefined;
       const zwgCell = (cashSheet as XLSX.WorkSheet)["I108"] as XLSX.CellObject | undefined;
-      if (usdCell != null && (usdCell.v !== undefined && usdCell.v !== "")) {
-        parsed["cash-usd"] = fmtNum(parseNum(usdCell.v));
-      }
-      if (zwgCell != null && (zwgCell.v !== undefined && zwgCell.v !== "")) {
-        parsed["cash-zwg"] = fmtNum(parseNum(zwgCell.v));
-      }
+      parsed["cash-usd"] = fmtNum(parseNum(usdCell?.v ?? 0));
+      parsed["cash-zwg"] = fmtNum(parseNum(zwgCell?.v ?? 0));
     }
 
     return NextResponse.json(parsed);
