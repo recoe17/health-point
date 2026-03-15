@@ -5,10 +5,10 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 :root {
-  --background: #050816;
-  --foreground: #e2e8f0;
-  --card: #0b1220;
-  --card-border: #1f2937;
+  --background: #ffffff;
+  --foreground: #020617;   /* near-black */
+  --card: #f8fafc;         /* slate-50 */
+  --card-border: #e2e8f0;  /* slate-200 */
   --accent: #ef4444;       /* Health Point red */
   --accent-muted: #b91c1c; /* darker red */
 }
