@@ -1,24 +1,24 @@
 import type { SummaryCard as SummaryCardType } from "@/types/dashboard";
 
 const colorClasses: Record<string, string> = {
-  green: "from-emerald-500/20 to-emerald-600/5 border-emerald-500/30",
-  blue: "from-sky-500/20 to-sky-600/5 border-sky-500/30",
-  amber: "from-amber-500/20 to-amber-600/5 border-amber-500/30",
-  violet: "from-violet-500/20 to-violet-600/5 border-violet-500/30",
+  green: "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-100",
+  blue: "bg-gradient-to-br from-sky-50 to-sky-100 border-sky-100",
+  amber: "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-100",
+  violet: "bg-gradient-to-br from-violet-50 to-violet-100 border-violet-100",
 };
 
 const iconColors: Record<string, string> = {
-  green: "text-emerald-400",
-  blue: "text-sky-400",
-  amber: "text-amber-400",
-  violet: "text-violet-400",
+  green: "text-emerald-500",
+  blue: "text-sky-500",
+  amber: "text-amber-500",
+  violet: "text-violet-500",
 };
 
 export default function SummaryCard(props: SummaryCardType) {
   const { title, value, subtitle, icon, trend, color } = props;
   return (
     <div
-      className={`rounded-2xl border bg-gradient-to-br p-6 backdrop-blur-sm transition hover:scale-[1.02] hover:shadow-lg ${colorClasses[color]}`}
+      className={`rounded-2xl border p-6 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 ${colorClasses[color]}`}
     >
       <div className="flex items-start justify-between">
         <div>
