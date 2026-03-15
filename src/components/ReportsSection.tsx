@@ -258,8 +258,9 @@ export default function ReportsSection() {
         }
       }
 
-      const isCash = item.id === "cash-usd" || item.id === "cash-zwg";
-      return { ...item, value, items, chartData: isCash ? undefined : chartData };
+      const noChart = item.id === "cash-usd" || item.id === "cash-zwg" || item.id === "cogs";
+      const cogsOnlyTotal = item.id === "cogs" ? [] : items;
+      return { ...item, value, items: cogsOnlyTotal, chartData: noChart ? undefined : chartData };
     },
     [importedDaily]
   );
@@ -356,6 +357,10 @@ export default function ReportsSection() {
         ...importedDaily,
         revenue: data.revenue,
         cogs: data.cogs,
+        revenueByLocation: data.revenueByLocation,
+        numberAdmissions: data.numberAdmissions,
+        theaterCases: data.theaterCases,
+        theaterMinutes: data.theaterMinutes,
       };
       setImportedDaily(next);
       if (typeof window !== "undefined") {

@@ -122,18 +122,19 @@ export async function POST(request: NextRequest) {
     const isDailyRevenueCogsFile =
       reportType === "daily" && file.name.toLowerCase().includes("revenue");
     if (isDailyRevenueCogsFile) {
-      const rowArray = rows as unknown[][];
       const colK = 10;
       const colA = 0;
       const colB = 1;
 
       let revenue = 0;
+      let revenueSheet: XLSX.WorkSheet = sheet as XLSX.WorkSheet;
       for (const sheetName of workbook.SheetNames) {
         const ws = workbook.Sheets[sheetName] as XLSX.WorkSheet;
         const cell = ws["K23"] as XLSX.CellObject | undefined;
         const v = cell != null ? parseNum(cell.v) : 0;
         if (v !== 0) {
           revenue = v;
+          revenueSheet = ws;
           break;
         }
         const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][];
@@ -142,11 +143,13 @@ export async function POST(request: NextRequest) {
           const fromRow = Array.isArray(row23) ? parseNum(row23[colK]) : 0;
           if (fromRow !== 0) {
             revenue = fromRow;
+            revenueSheet = ws;
             break;
           }
         }
       }
 
+      const rowArray = rows as unknown[][];
       const totalRowIndex = rowArray.findIndex((r) => {
         for (let c = 0; c <= 4; c++) {
           const label = String(r[c] ?? "").trim().toLowerCase();
@@ -163,11 +166,12 @@ export async function POST(request: NextRequest) {
           + (gCell != null ? parseNum(gCell.v) : parseNum(rowArray[totalRowIndex]?.[6]));
       }
 
+      const chartRows = XLSX.utils.sheet_to_json<unknown[]>(revenueSheet, { header: 1 }) as unknown[][];
       const revenueByLocation: { name: string; value: number }[] = [];
       for (let r = 10; r <= 19; r++) {
-        const row = rowArray[r];
+        const row = chartRows[r];
         if (!Array.isArray(row)) {
-          revenueByLocation.push({ name: "", value: 0 });
+          revenueByLocation.push({ name: `Row ${r + 1}`, value: 0 });
           continue;
         }
         const name = String(row[colA] ?? row[colB] ?? "").trim();
@@ -175,19 +179,18 @@ export async function POST(request: NextRequest) {
         revenueByLocation.push({ name: name || `Row ${r + 1}`, value });
       }
 
-      const findMetric = (keywords: string[]): number => {
-        for (const row of rowArray) {
-          if (!Array.isArray(row)) continue;
-          const label = String(row[colA] ?? row[colB] ?? "").trim().toLowerCase();
-          if (!label) continue;
-          const match = keywords.some((k) => label.includes(k));
-          if (match) return parseNum(row[colK]);
-        }
-        return 0;
+      const readCell = (ws: XLSX.WorkSheet, cellRef: string): number => {
+        const cell = ws[cellRef] as XLSX.CellObject | undefined;
+        if (cell != null) return parseNum(cell.v);
+        const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][];
+        const row23 = sheetRows[22];
+        if (!Array.isArray(row23)) return 0;
+        const colIndex = cellRef.charCodeAt(0) - 65;
+        return parseNum(row23[colIndex]);
       };
-      const numberAdmissions = findMetric(["admissions", "number admissions", "no. admissions"]);
-      const theaterCases = findMetric(["theatre cases", "theater cases", "theatre case"]);
-      const theaterMinutes = findMetric(["theatre minutes", "theater minutes", "theatre minute"]);
+      const numberAdmissions = readCell(sheet as XLSX.WorkSheet, "L23");
+      const theaterCases = readCell(sheet as XLSX.WorkSheet, "N23");
+      const theaterMinutes = readCell(sheet as XLSX.WorkSheet, "O23");
 
       return NextResponse.json({
         revenue: fmt(revenue),
