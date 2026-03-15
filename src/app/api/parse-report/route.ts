@@ -148,6 +148,18 @@ export async function POST(request: NextRequest) {
       if (field) parsed[field] = fmtNum(num);
     }
 
+    // For daily reports, always read Cash USD (I68) and Cash ZWG (I108) from the sheet
+    if (reportType === "daily") {
+      const usdCell = sheet["I68"] as XLSX.CellObject | undefined;
+      const zwgCell = sheet["I108"] as XLSX.CellObject | undefined;
+      if (usdCell != null && (usdCell.v !== undefined && usdCell.v !== "")) {
+        parsed["cash-usd"] = fmtNum(parseNum(usdCell.v));
+      }
+      if (zwgCell != null && (zwgCell.v !== undefined && zwgCell.v !== "")) {
+        parsed["cash-zwg"] = fmtNum(parseNum(zwgCell.v));
+      }
+    }
+
     return NextResponse.json(parsed);
   } catch (err) {
     return NextResponse.json(
