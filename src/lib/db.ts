@@ -8,7 +8,9 @@ function getSql() {
 
 export type ReportType = "monthly" | "daily";
 
-export async function initSchema(sql: ReturnType<typeof neon>) {
+type SqlClient = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+
+export async function initSchema(sql: SqlClient) {
   await sql`
     CREATE TABLE IF NOT EXISTS report_data (
       id SERIAL PRIMARY KEY,
