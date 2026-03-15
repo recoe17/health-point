@@ -19,14 +19,31 @@ export async function POST(request: NextRequest) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
-    // For daily reports, prefer the sheet named "Monthly Transactions..." for Cash USD (I68) / Cash ZWG (I108)
-    const monthlySheetName = workbook.SheetNames.find((name) =>
-      name.toLowerCase().includes("monthly transactions")
-    );
-    const cashSheet =
-      reportType === "daily" && monthlySheetName
-        ? workbook.Sheets[monthlySheetName]
-        : sheet;
+    // For daily reports, choose the sheet that actually holds the cash totals (I68 / I108).
+    // 1) Prefer a sheet whose name contains "monthly transactions"
+    // 2) Otherwise, scan all sheets and pick the first one where I68 or I108 has a value
+    let cashSheet: XLSX.WorkSheet = sheet;
+    if (reportType === "daily") {
+      const monthlySheetName = workbook.SheetNames.find((name) =>
+        name.toLowerCase().includes("monthly transactions")
+      );
+      if (monthlySheetName) {
+        cashSheet = workbook.Sheets[monthlySheetName];
+      } else {
+        for (const name of workbook.SheetNames) {
+          const ws = workbook.Sheets[name] as XLSX.WorkSheet;
+          const usdCell = ws["I68"] as XLSX.CellObject | undefined;
+          const zwgCell = ws["I108"] as XLSX.CellObject | undefined;
+          if (
+            (usdCell && usdCell.v !== undefined && usdCell.v !== "") ||
+            (zwgCell && zwgCell.v !== undefined && zwgCell.v !== "")
+          ) {
+            cashSheet = ws;
+            break;
+          }
+        }
+      }
+    }
 
     if (!rows.length) {
       return NextResponse.json({ error: "File is empty" }, { status: 400 });
