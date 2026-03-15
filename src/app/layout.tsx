@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Company Financial Dashboard | Final Details",
-  description: "Company financial summary and final details dashboard",
+  title: "Health Point Financial Dashboard",
+  description: "Health Point financial summary and final details dashboard",
 };
 
 export default function RootLayout({

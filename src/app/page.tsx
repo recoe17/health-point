@@ -1,3 +1,4 @@
+import Image from "next/image";
 import ReportsSection from "@/components/ReportsSection";
 import FinalDetailsTable from "@/components/FinalDetailsTable";
 import type { FinalDetailItem } from "@/types/dashboard";
@@ -18,9 +19,19 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0a0f1a]">
       {/* Header */}
       <header className="border-b border-slate-800/80 bg-slate-900/30 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Company Financial Dashboard</h1>
-          <p className="text-slate-500 mt-1">Final Details & Summary</p>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
+          <Image
+            src="/healthpoint-logo.png"
+            alt="HealthPoint"
+            width={180}
+            height={48}
+            className="h-10 w-auto object-contain"
+            priority
+          />
+          <div>
+            <h1 className="text-xl font-bold text-slate-100 tracking-tight">Health Point Financial Dashboard</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Final Details & Summary</p>
+          </div>
         </div>
       </header>
 
