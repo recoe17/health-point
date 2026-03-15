@@ -1,17 +1,17 @@
 import type { SummaryCard as SummaryCardType } from "@/types/dashboard";
 
 const colorClasses: Record<string, string> = {
-  green: "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-100",
-  blue: "bg-gradient-to-br from-sky-50 to-sky-100 border-sky-100",
-  amber: "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-100",
-  violet: "bg-gradient-to-br from-violet-50 to-violet-100 border-violet-100",
+  green: "bg-white border-red-100",
+  blue: "bg-white border-red-100",
+  amber: "bg-white border-red-100",
+  violet: "bg-white border-red-100",
 };
 
 const iconColors: Record<string, string> = {
-  green: "text-emerald-500",
-  blue: "text-sky-500",
-  amber: "text-amber-500",
-  violet: "text-violet-500",
+  green: "text-red-500",
+  blue: "text-red-500",
+  amber: "text-red-500",
+  violet: "text-red-500",
 };
 
 export default function SummaryCard(props: SummaryCardType) {
@@ -26,9 +26,7 @@ export default function SummaryCard(props: SummaryCardType) {
           <p className="mt-2 text-3xl font-bold tracking-tight">{value}</p>
           {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
           {trend !== undefined && (
-            <span
-              className={`mt-2 inline-block text-xs font-semibold ${trend >= 0 ? "text-emerald-400" : "text-rose-400"}`}
-            >
+            <span className="mt-2 inline-block text-xs font-semibold text-red-500">
               {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% vs last period
             </span>
           )}

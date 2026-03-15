@@ -1,9 +1,9 @@
 import type { FinalDetailItem } from "@/types/dashboard";
 
 const statusStyles = {
-  healthy: "text-emerald-600 bg-emerald-50 border border-emerald-100",
-  warning: "text-amber-600 bg-amber-50 border border-amber-100",
-  attention: "text-rose-600 bg-rose-50 border border-rose-100",
+  healthy: "text-slate-900 bg-white border border-slate-200",
+  warning: "text-slate-900 bg-white border border-slate-200",
+  attention: "text-red-600 bg-red-50 border border-red-200",
 };
 
 const trendIcons = {
@@ -47,15 +47,7 @@ export default function FinalDetailsTable({ items, title = "Final Details" }: Fi
                 {item.unit && <span className="text-slate-500 font-normal ml-1">{item.unit}</span>}
               </span>
               {item.trend && (
-                <span
-                  className={`text-sm ${
-                    item.trend === "up"
-                      ? "text-emerald-400"
-                      : item.trend === "down"
-                      ? "text-rose-400"
-                      : "text-slate-500"
-                  }`}
-                >
+                <span className="text-sm text-red-500">
                   {trendIcons[item.trend]}
                 </span>
               )}
