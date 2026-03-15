@@ -240,17 +240,50 @@ export default function ReportsSection() {
   );
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/reports?type=monthly").then((r) => r.ok ? r.json() : {}),
-      fetch("/api/reports?type=daily").then((r) => r.ok ? r.json() : {}),
-    ]).then(([monthly, daily]) => {
+    const load = async () => {
+      let monthly: Record<string, string> = {};
+      let daily: Record<string, unknown> = {};
+      try {
+        const [monthlyRes, dailyRes] = await Promise.all([
+          fetch("/api/reports?type=monthly").then((r) => (r.ok ? r.json() : {})),
+          fetch("/api/reports?type=daily").then((r) => (r.ok ? r.json() : {})),
+        ]);
+        monthly = (monthlyRes && typeof monthlyRes === "object") ? (monthlyRes as Record<string, string>) : {};
+        daily = (dailyRes && typeof dailyRes === "object") ? (dailyRes as Record<string, unknown>) : {};
+      } catch {
+        // continue to localStorage fallback
+      }
+      if (typeof window !== "undefined") {
+        try {
+          const storedMonthly = localStorage.getItem("healthpoint-monthly");
+          const storedDaily = localStorage.getItem("healthpoint-daily");
+          if (!Object.keys(monthly).length && storedMonthly) {
+            const parsed = JSON.parse(storedMonthly) as Record<string, string>;
+            if (Object.keys(parsed).length) monthly = parsed;
+          }
+          if (!Object.keys(daily).length && storedDaily) {
+            const parsed = JSON.parse(storedDaily) as Record<string, unknown>;
+            if (Object.keys(parsed).length) daily = parsed;
+          }
+        } catch {
+          // ignore
+        }
+      }
       if (Object.keys(monthly).length) setImportedMonthly(monthly);
       if (Object.keys(daily).length) setImportedDaily(daily);
-    });
+    };
+    load();
   }, []);
 
   const handleImportMonthly = useCallback(async (data: Record<string, unknown>) => {
     setImportedMonthly(data as Record<string, string>);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("healthpoint-monthly", JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
     try {
       await fetch("/api/reports", {
         method: "POST",
@@ -264,6 +297,13 @@ export default function ReportsSection() {
 
   const handleImportDaily = useCallback(async (data: Record<string, unknown>) => {
     setImportedDaily(data);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("healthpoint-daily", JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
     try {
       await fetch("/api/reports", {
         method: "POST",

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, data } = body as { type?: string; data?: Record<string, string> };
+    const { type, data } = body as { type?: string; data?: Record<string, unknown> };
     if (type !== "monthly" && type !== "daily" || !data || typeof data !== "object") {
       return NextResponse.json({ error: "Invalid type or data" }, { status: 400 });
     }

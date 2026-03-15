@@ -1,6 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
+const COL_I = 8;
+const COL_A = 0;
+const COL_B = 1;
+
+/** Line-item labels under each bank section (not section headers). When we see "Total", use col I as that section's total. */
+const SECTION_LINE_LABELS = new Set([
+  "total", "subtotal", "grand total", "",
+  "b/bfwd", "receipts", "transfer", "payments",
+  "security deposit and prepayments", "security deposit", "prepayments",
+]);
+
+function extractBankBreakdownBySections(
+  cashRows: unknown[][],
+  parseNum: (v: unknown) => number,
+  fmt: (n: number) => string
+): { cashUsdBanks: { name: string; value: string }[]; cashZwgBanks: { name: string; value: string }[] } {
+  const result = (start: number, end: number) => {
+    const list: { name: string; value: string }[] = [];
+    let currentSection = "";
+    for (let r = start; r < Math.min(end, cashRows.length); r++) {
+      const row = cashRows[r];
+      if (!Array.isArray(row)) continue;
+      const label = String(row[COL_A] ?? row[COL_B] ?? "").trim();
+      const normalized = label.toLowerCase();
+      const amount = parseNum(row[COL_I]);
+      if (normalized === "total") {
+        if (currentSection) {
+          list.push({ name: currentSection, value: fmt(amount) });
+        }
+        continue;
+      }
+      if (!label || SECTION_LINE_LABELS.has(normalized)) continue;
+      currentSection = label;
+    }
+    return list;
+  };
+  return {
+    cashUsdBanks: result(0, 67),
+    cashZwgBanks: result(69, 107),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -94,31 +136,7 @@ export async function POST(request: NextRequest) {
         const cashZwg = zwgCell ? parseNum(zwgCell.v) : 0;
 
         const cashRows = XLSX.utils.sheet_to_json<unknown[]>(cashSheet as XLSX.WorkSheet, { header: 1 }) as unknown[][];
-        const colI = 8;
-        const colA = 0;
-        const colB = 1;
-        const skipLabels = new Set(["total", "subtotal", "grand total", ""]);
-        const toBankRow = (row: unknown[]): { name: string; value: string } | null => {
-          const amount = parseNum(row[colI]);
-          if (amount === 0) return null;
-          const label = String(row[colA] ?? row[colB] ?? "").trim();
-          if (!label || skipLabels.has(label.toLowerCase())) return null;
-          return { name: label, value: fmt(amount) };
-        };
-        const cashUsdBanks: { name: string; value: string }[] = [];
-        for (let r = 0; r < Math.min(67, cashRows.length); r++) {
-          const row = cashRows[r];
-          if (!Array.isArray(row)) continue;
-          const bank = toBankRow(row);
-          if (bank) cashUsdBanks.push(bank);
-        }
-        const cashZwgBanks: { name: string; value: string }[] = [];
-        for (let r = 69; r < Math.min(107, cashRows.length); r++) {
-          const row = cashRows[r];
-          if (!Array.isArray(row)) continue;
-          const bank = toBankRow(row);
-          if (bank) cashZwgBanks.push(bank);
-        }
+        const { cashUsdBanks, cashZwgBanks } = extractBankBreakdownBySections(cashRows, parseNum, fmt);
 
         return NextResponse.json({
           "cash-usd": fmt(cashUsd),
@@ -218,31 +236,7 @@ export async function POST(request: NextRequest) {
       parsed["cash-zwg"] = fmtNum(parseNum(zwgCell?.v ?? 0));
 
       const cashRows = XLSX.utils.sheet_to_json<unknown[]>(cashSheet as XLSX.WorkSheet, { header: 1 }) as unknown[][];
-      const colI = 8;
-      const colA = 0;
-      const colB = 1;
-      const skipLabels = new Set(["total", "subtotal", "grand total", ""]);
-      const toBankRow = (row: unknown[], rowIndex: number): { name: string; value: string } | null => {
-        const amount = parseNum(row[colI]);
-        if (amount === 0) return null;
-        const label = String(row[colA] ?? row[colB] ?? "").trim();
-        if (!label || skipLabels.has(label.toLowerCase())) return null;
-        return { name: label, value: fmtNum(amount) };
-      };
-      const cashUsdBanks: { name: string; value: string }[] = [];
-      for (let r = 0; r < Math.min(67, cashRows.length); r++) {
-        const row = cashRows[r];
-        if (!Array.isArray(row)) continue;
-        const bank = toBankRow(row, r);
-        if (bank) cashUsdBanks.push(bank);
-      }
-      const cashZwgBanks: { name: string; value: string }[] = [];
-      for (let r = 69; r < Math.min(107, cashRows.length); r++) {
-        const row = cashRows[r];
-        if (!Array.isArray(row)) continue;
-        const bank = toBankRow(row, r);
-        if (bank) cashZwgBanks.push(bank);
-      }
+      const { cashUsdBanks, cashZwgBanks } = extractBankBreakdownBySections(cashRows, parseNum, fmtNum);
       (parsed as Record<string, unknown>)["cashUsdBanks"] = cashUsdBanks;
       (parsed as Record<string, unknown>)["cashZwgBanks"] = cashZwgBanks;
     }

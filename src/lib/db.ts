@@ -26,7 +26,7 @@ export async function initSchema(sql: SqlClient) {
   `;
 }
 
-export async function getReportData(type: ReportType): Promise<Record<string, string>> {
+export async function getReportData(type: ReportType): Promise<Record<string, unknown>> {
   const sql = getSql();
   const rows = await sql`
     SELECT data FROM report_data WHERE report_type = ${type} LIMIT 1
@@ -35,13 +35,13 @@ export async function getReportData(type: ReportType): Promise<Record<string, st
   const row = rows[0] as { data: string | null };
   if (!row?.data) return {};
   try {
-    return JSON.parse(row.data) as Record<string, string>;
+    return JSON.parse(row.data) as Record<string, unknown>;
   } catch {
     return {};
   }
 }
 
-export async function setReportData(type: ReportType, data: Record<string, string>): Promise<void> {
+export async function setReportData(type: ReportType, data: Record<string, unknown>): Promise<void> {
   const sql = getSql();
   const dataStr = JSON.stringify(data);
   await sql`
