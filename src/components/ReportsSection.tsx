@@ -205,15 +205,19 @@ const DAILY_ITEMS = [
   },
 ];
 
+type DetailModalItem =
+  | (typeof MONTHLY_ITEMS)[0]
+  | ((typeof DAILY_ITEMS)[0] & { chartData?: { name: string; value: number }[] });
+
 export default function ReportsSection() {
-  const [modalItem, setModalItem] = useState<typeof MONTHLY_ITEMS[0] | typeof DAILY_ITEMS[0] | null>(null);
+  const [modalItem, setModalItem] = useState<DetailModalItem | null>(null);
   const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily-cash" | "daily-revenue-cogs" | null>(null);
   const [importedMonthly, setImportedMonthly] = useState<Record<string, string>>({});
   const [importedDaily, setImportedDaily] = useState<Record<string, unknown>>({});
 
-  const openMetricDetail = (item: typeof MONTHLY_ITEMS[0] | typeof DAILY_ITEMS[0]) => {
+  const openMetricDetail = (item: DetailModalItem) => {
     setModalItem(item);
   };
 
