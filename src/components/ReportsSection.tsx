@@ -229,13 +229,13 @@ export default function ReportsSection() {
     (item: (typeof DAILY_ITEMS)[0]) => {
       const value = (importedDaily[item.id] as string | undefined) ?? item.value;
       let items = item.items;
-      const isCash = item.id === "cash-usd" || item.id === "cash-zwg";
+      const isDailyMetric = ["cash-usd", "cash-zwg", "revenue", "cogs"].includes(item.id);
       if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
         items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
       } else if (item.id === "cash-zwg" && Array.isArray(importedDaily.cashZwgBanks) && importedDaily.cashZwgBanks.length > 0) {
         items = (importedDaily.cashZwgBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
       }
-      return { ...item, value, items, ...(isCash ? { chartData: undefined } : {}) };
+      return { ...item, value, items, ...(isDailyMetric ? { chartData: undefined } : {}) };
     },
     [importedDaily]
   );
@@ -385,7 +385,7 @@ export default function ReportsSection() {
             </div>
             <div className="flex-1 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                {DAILY_ITEMS.filter((i) => i.id === "cash-usd" || i.id === "cash-zwg").map((item) => {
+                {DAILY_ITEMS.map((item) => {
                   const merged = mergeDailyItem(item);
                   return (
                     <MetricCard
@@ -411,23 +411,6 @@ export default function ReportsSection() {
               >
                 Import (update Cash USD / Cash ZWG)
               </button>
-              <div className="space-y-2">
-                {DAILY_ITEMS.filter((i) => i.id !== "cash-usd" && i.id !== "cash-zwg").map((item) => {
-                  const merged = mergeDailyItem(item);
-                  return (
-                    <MetricCard
-                      key={item.id}
-                      label={merged.label}
-                      value={merged.value}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openMetricDetail(merged);
-                      }}
-                      accentColor="text-white"
-                    />
-                  );
-                })}
-              </div>
             </div>
           </button>
         </div>
