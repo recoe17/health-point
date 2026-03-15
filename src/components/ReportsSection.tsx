@@ -256,14 +256,14 @@ export default function ReportsSection() {
           <button
             type="button"
             onClick={() => setMonthlyModalOpen(true)}
-            className="text-left rounded-2xl border from-red-500/20 to-red-600/5 border-red-500/40 bg-gradient-to-br p-6 md:p-8 backdrop-blur-sm transition hover:shadow-xl hover:border-opacity-60 min-h-[200px] flex flex-col cursor-pointer group"
+            className="text-left rounded-2xl border border-red-700 bg-red-600 p-6 md:p-8 shadow-md transition hover:shadow-lg hover:-translate-y-0.5 min-h-[200px] flex flex-col cursor-pointer group text-white"
           >
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-100 tracking-tight group-hover:text-red-400 transition">
+                <h2 className="text-xl font-bold tracking-tight group-hover:text-white transition">
                   Monthly Report
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Financial summary for March 2025</p>
+                <p className="text-sm text-red-100/90 mt-1">Financial summary for March 2025</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -272,12 +272,12 @@ export default function ReportsSection() {
                     e.stopPropagation();
                     setImportModalOpen("monthly");
                   }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/50 hover:bg-red-500/10 transition"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 bg-white hover:bg-red-50 transition"
                 >
                   Import
                 </button>
                 <svg
-                  className="w-6 h-6 text-slate-500 group-hover:text-red-400 transition"
+                  className="w-6 h-6 text-red-100 group-hover:text-white transition"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -298,6 +298,7 @@ export default function ReportsSection() {
                       e.stopPropagation();
                       openMetricDetail(merged);
                     }}
+                    accentColor="text-white"
                   />
                 );
               })}
@@ -307,14 +308,14 @@ export default function ReportsSection() {
           <button
             type="button"
             onClick={() => setDailyModalOpen(true)}
-            className="text-left rounded-2xl border from-slate-700/60 to-slate-900/40 border-slate-700/60 bg-gradient-to-br p-6 md:p-8 backdrop-blur-sm transition hover:shadow-xl hover:border-opacity-60 min-h-[200px] flex flex-col cursor-pointer group"
+            className="text-left rounded-2xl border border-slate-900 bg-slate-900 p-6 md:p-8 shadow-md transition hover:shadow-lg hover:-translate-y-0.5 min-h-[200px] flex flex-col cursor-pointer group text-white"
           >
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-100 tracking-tight group-hover:text-red-300 transition">
+                <h2 className="text-xl font-bold tracking-tight group-hover:text-white transition">
                   Daily Reports
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Cash flow & transactions overview</p>
+                <p className="text-sm text-slate-200/80 mt-1">Cash flow &amp; transactions overview</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -323,12 +324,12 @@ export default function ReportsSection() {
                     e.stopPropagation();
                     setImportModalOpen("daily");
                   }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-300 border border-red-500/40 hover:bg-red-500/10 transition"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-900 bg-white hover:bg-slate-100 transition"
                 >
                   Import
                 </button>
                 <svg
-                  className="w-6 h-6 text-slate-500 group-hover:text-red-300 transition"
+                  className="w-6 h-6 text-slate-200 group-hover:text-white transition"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -349,7 +350,7 @@ export default function ReportsSection() {
                       e.stopPropagation();
                       openMetricDetail(merged);
                     }}
-                    accentColor="text-red-300"
+                    accentColor="text-white"
                   />
                 );
               })}
