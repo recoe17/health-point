@@ -16,9 +16,9 @@ const finalDetails: FinalDetailItem[] = [
 
 export default function Dashboard() {
   return (
-    <div className="min-h-screen bg-[#0a0f1a]">
+    <div className="min-h-screen bg-white text-slate-900">
       {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/30 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
           <Image
             src="/healthpoint-logo.png"
@@ -29,8 +29,8 @@ export default function Dashboard() {
             priority
           />
           <div>
-            <h1 className="text-xl font-bold text-slate-100 tracking-tight">Health Point Financial Dashboard</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Final Details & Summary</p>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Health Point Financial Dashboard</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Final Details &amp; Summary</p>
           </div>
         </div>
       </header>
