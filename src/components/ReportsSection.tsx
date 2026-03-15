@@ -209,7 +209,7 @@ export default function ReportsSection() {
   const [modalItem, setModalItem] = useState<typeof MONTHLY_ITEMS[0] | typeof DAILY_ITEMS[0] | null>(null);
   const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily" | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily-cash" | "daily-revenue-cogs" | null>(null);
   const [importedMonthly, setImportedMonthly] = useState<Record<string, string>>({});
   const [importedDaily, setImportedDaily] = useState<Record<string, unknown>>({});
 
@@ -296,25 +296,63 @@ export default function ReportsSection() {
     }
   }, []);
 
-  const handleImportDaily = useCallback(async (data: Record<string, unknown>) => {
-    setImportedDaily(data);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("healthpoint-daily", JSON.stringify(data));
-      } catch {
-        // ignore
+  const handleImportDailyCash = useCallback(
+    async (data: Record<string, unknown>) => {
+      const next = {
+        ...importedDaily,
+        "cash-usd": data["cash-usd"],
+        "cash-zwg": data["cash-zwg"],
+        cashUsdBanks: data.cashUsdBanks,
+        cashZwgBanks: data.cashZwgBanks,
+      };
+      setImportedDaily(next);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("healthpoint-daily", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
       }
-    }
-    try {
-      await fetch("/api/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "daily", data }),
-      });
-    } catch {
-      // ignore if DB not configured
-    }
-  }, []);
+      try {
+        await fetch("/api/reports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "daily", data: next }),
+        });
+      } catch {
+        // ignore if DB not configured
+      }
+    },
+    [importedDaily]
+  );
+
+  const handleImportDailyRevenueCogs = useCallback(
+    async (data: Record<string, unknown>) => {
+      const next = {
+        ...importedDaily,
+        revenue: data.revenue,
+        cogs: data.cogs,
+      };
+      setImportedDaily(next);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("healthpoint-daily", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+      }
+      try {
+        await fetch("/api/reports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "daily", data: next }),
+        });
+      } catch {
+        // ignore if DB not configured
+      }
+    },
+    [importedDaily]
+  );
 
   return (
     <>
@@ -383,34 +421,65 @@ export default function ReportsSection() {
               </h2>
               <p className="text-sm text-slate-200/80 mt-1">Cash flow &amp; transactions overview</p>
             </div>
-            <div className="flex-1 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {DAILY_ITEMS.map((item) => {
-                  const merged = mergeDailyItem(item);
-                  return (
-                    <MetricCard
-                      key={item.id}
-                      label={merged.label}
-                      value={merged.value}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openMetricDetail(merged);
-                      }}
-                      accentColor="text-white"
-                    />
-                  );
-                })}
+            <div className="flex-1 space-y-6">
+              <div>
+                <div className="grid grid-cols-2 gap-3">
+                  {DAILY_ITEMS.filter((i) => i.id === "cash-usd" || i.id === "cash-zwg").map((item) => {
+                    const merged = mergeDailyItem(item);
+                    return (
+                      <MetricCard
+                        key={item.id}
+                        label={merged.label}
+                        value={merged.value}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMetricDetail(merged);
+                        }}
+                        accentColor="text-white"
+                      />
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImportModalOpen("daily-cash");
+                  }}
+                  className="mt-3 w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition"
+                >
+                  Import (Cash USD / Cash ZWG)
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setImportModalOpen("daily");
-                }}
-                className="w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition"
-              >
-                Import (update Cash USD / Cash ZWG)
-              </button>
+              <div>
+                <div className="grid grid-cols-2 gap-3">
+                  {DAILY_ITEMS.filter((i) => i.id === "revenue" || i.id === "cogs").map((item) => {
+                    const merged = mergeDailyItem(item);
+                    return (
+                      <MetricCard
+                        key={item.id}
+                        label={merged.label}
+                        value={merged.value}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMetricDetail(merged);
+                        }}
+                        accentColor="text-white"
+                      />
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImportModalOpen("daily-revenue-cogs");
+                  }}
+                  className="mt-3 w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition"
+                >
+                  Import (Revenue & COGS)
+                </button>
+              </div>
             </div>
           </button>
         </div>
@@ -467,12 +536,22 @@ export default function ReportsSection() {
           onImport={handleImportMonthly}
         />
       )}
-      {importModalOpen === "daily" && (
+      {importModalOpen === "daily-cash" && (
         <ImportModal
           isOpen
           onClose={() => setImportModalOpen(null)}
           reportType="daily"
-          onImport={handleImportDaily}
+          onImport={handleImportDailyCash}
+          dailyFocus="cash"
+        />
+      )}
+      {importModalOpen === "daily-revenue-cogs" && (
+        <ImportModal
+          isOpen
+          onClose={() => setImportModalOpen(null)}
+          reportType="daily"
+          onImport={handleImportDailyRevenueCogs}
+          dailyFocus="revenue-cogs"
         />
       )}
     </>

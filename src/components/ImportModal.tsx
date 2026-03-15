@@ -4,11 +4,15 @@ import { useCallback, useState } from "react";
 import type { ReportType } from "@/lib/parseImport";
 import { parseFile } from "@/lib/parseImport";
 
+export type DailyImportFocus = "cash" | "revenue-cogs";
+
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   reportType: ReportType;
   onImport: (data: Record<string, unknown>) => void;
+  /** When reportType is "daily", only show and pass these keys (separate cash vs revenue/cogs imports). */
+  dailyFocus?: DailyImportFocus;
 }
 
 const ACCEPT = ".csv,.xlsx,.xls";
@@ -22,7 +26,10 @@ const FIELD_KEYS: Record<ReportType, string[]> = {
   daily: ["cash-usd", "cash-zwg", "revenue", "cogs"],
 };
 
-export default function ImportModal({ isOpen, onClose, reportType, onImport }: ImportModalProps) {
+const DAILY_CASH_KEYS = ["cash-usd", "cash-zwg", "cashUsdBanks", "cashZwgBanks"];
+const DAILY_REVENUE_COGS_KEYS = ["revenue", "cogs"];
+
+export default function ImportModal({ isOpen, onClose, reportType, onImport, dailyFocus }: ImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +67,15 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
     setParsedData(null);
     try {
       const parsed = await parseFile(file, reportType) as Record<string, unknown>;
-      if (reportType === "daily") {
+      if (reportType === "daily" && dailyFocus) {
+        const keys = dailyFocus === "cash" ? DAILY_CASH_KEYS : DAILY_REVENUE_COGS_KEYS;
+        const data: Record<string, unknown> = {};
+        for (const k of keys) {
+          const v = parsed[k];
+          if (v !== undefined && v !== null) data[k] = v;
+        }
+        setParsedData(data);
+      } else if (reportType === "daily") {
         setParsedData(parsed);
       } else {
         const data: Record<string, unknown> = {};
@@ -104,7 +119,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
       >
         <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4">
           <h2 className="text-lg font-bold text-slate-100">
-            Import {reportType === "monthly" ? "Monthly" : "Daily"} Report
+            Import {reportType === "monthly" ? "Monthly" : dailyFocus === "cash" ? "Daily (Cash USD / ZWG)" : dailyFocus === "revenue-cogs" ? "Daily (Revenue & COGS)" : "Daily"} Report
           </h2>
           <button
             onClick={handleClose}
