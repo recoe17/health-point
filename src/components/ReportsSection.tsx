@@ -229,7 +229,7 @@ export default function ReportsSection() {
     (item: (typeof DAILY_ITEMS)[0]) => {
       const value = (importedDaily[item.id] as string | undefined) ?? item.value;
       let items = item.items;
-      let chartData = item.chartData;
+      let chartData: { name: string; value: number }[] | undefined = item.chartData;
 
       if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
         items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
