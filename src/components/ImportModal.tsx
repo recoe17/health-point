@@ -211,17 +211,17 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-3 border-t border-slate-700 px-6 py-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-700 px-6 py-4">
           <button
             onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition"
+            className="rounded-lg px-4 py-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition order-2 sm:order-1"
           >
             Cancel
           </button>
           {parsedData ? (
             <button
               onClick={handleUpdate}
-              className="rounded-lg px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-500 transition"
+              className="rounded-xl px-6 py-3.5 bg-red-600 text-white font-semibold text-base shadow-lg shadow-red-600/30 ring-2 ring-red-400/50 hover:bg-red-500 hover:shadow-red-500/40 transition order-1 sm:order-2 w-full sm:w-auto"
             >
               Update Dashboard
             </button>
