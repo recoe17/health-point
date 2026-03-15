@@ -131,8 +131,8 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
             onDrop={handleDrop}
             className={`rounded-xl border-2 border-dashed p-8 text-center transition ${
               isDragging
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-slate-600 hover:border-slate-500"
+                ? "border-red-500 bg-red-500/10"
+                : "border-slate-600 hover:border-red-400/60"
             }`}
           >
             <input
@@ -167,8 +167,8 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
           </div>
           {error && <p className="text-sm text-rose-400">{error}</p>}
           {parsedData && Object.keys(parsedData).length > 0 && (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
-              <p className="text-sm font-medium text-emerald-400 mb-3">Preview — click Update to show latest on dashboard</p>
+            <div className="rounded-lg border border-red-500/40 bg-red-500/5 p-4">
+              <p className="text-sm font-medium text-red-400 mb-3">Preview — click Update to show latest on dashboard</p>
               <div className="space-y-2 text-sm">
                 {Object.entries(parsedData).map(([key, val]) => (
                   <div key={key} className="flex justify-between text-slate-300">
@@ -190,7 +190,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
           {parsedData ? (
             <button
               onClick={handleUpdate}
-              className="rounded-lg px-4 py-2 bg-emerald-600 text-white font-medium hover:bg-emerald-500 transition"
+              className="rounded-lg px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-500 transition"
             >
               Update Dashboard
             </button>
@@ -198,7 +198,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport }: I
             <button
               onClick={handleParse}
               disabled={!file || loading}
-              className="rounded-lg px-4 py-2 bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="rounded-lg px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {loading ? "Parsing…" : "Parse File"}
             </button>

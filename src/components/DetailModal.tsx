@@ -57,10 +57,10 @@ export default function DetailModal({
         className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-900/95 px-6 py-4">
+          <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-900/95 px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-slate-100">{title}</h2>
-            <p className="text-2xl font-semibold text-emerald-400 mt-1">{value}</p>
+              <p className="text-2xl font-semibold text-red-400 mt-1">{value}</p>
           </div>
           <button
             onClick={onClose}

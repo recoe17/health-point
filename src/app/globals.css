@@ -5,12 +5,12 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 :root {
-  --background: #0a0f1a;
+  --background: #050816;
   --foreground: #e2e8f0;
-  --card: #111827;
-  --card-border: #1e293b;
-  --accent: #22c55e;
-  --accent-muted: #15803d;
+  --card: #0b1220;
+  --card-border: #1f2937;
+  --accent: #ef4444;       /* Health Point red */
+  --accent-muted: #b91c1c; /* darker red */
 }
 
 body {
