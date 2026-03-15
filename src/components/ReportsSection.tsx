@@ -229,13 +229,33 @@ export default function ReportsSection() {
     (item: (typeof DAILY_ITEMS)[0]) => {
       const value = (importedDaily[item.id] as string | undefined) ?? item.value;
       let items = item.items;
-      const isDailyMetric = ["cash-usd", "cash-zwg", "revenue", "cogs"].includes(item.id);
+      let chartData = item.chartData;
+
       if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
         items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
       } else if (item.id === "cash-zwg" && Array.isArray(importedDaily.cashZwgBanks) && importedDaily.cashZwgBanks.length > 0) {
         items = (importedDaily.cashZwgBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
+      } else if (item.id === "revenue") {
+        const loc = importedDaily.revenueByLocation as { name: string; value: number }[] | undefined;
+        if (Array.isArray(loc) && loc.length > 0) {
+          chartData = loc.map((x) => ({ name: x.name, value: x.value }));
+        } else {
+          chartData = undefined;
+        }
+        const na = importedDaily.numberAdmissions as string | undefined;
+        const tc = importedDaily.theaterCases as string | undefined;
+        const tm = importedDaily.theaterMinutes as string | undefined;
+        if (na !== undefined || tc !== undefined || tm !== undefined) {
+          items = [
+            { label: "Number admissions", value: na ?? "—" },
+            { label: "Theater cases", value: tc ?? "—" },
+            { label: "Theater minutes", value: tm ?? "—" },
+          ];
+        }
       }
-      return { ...item, value, items, ...(isDailyMetric ? { chartData: undefined } : {}) };
+
+      const isCash = item.id === "cash-usd" || item.id === "cash-zwg";
+      return { ...item, value, items, chartData: isCash ? undefined : chartData };
     },
     [importedDaily]
   );

@@ -27,7 +27,14 @@ const FIELD_KEYS: Record<ReportType, string[]> = {
 };
 
 const DAILY_CASH_KEYS = ["cash-usd", "cash-zwg", "cashUsdBanks", "cashZwgBanks"];
-const DAILY_REVENUE_COGS_KEYS = ["revenue", "cogs"];
+const DAILY_REVENUE_COGS_KEYS = [
+  "revenue",
+  "cogs",
+  "revenueByLocation",
+  "numberAdmissions",
+  "theaterCases",
+  "theaterMinutes",
+];
 
 export default function ImportModal({ isOpen, onClose, reportType, onImport, dailyFocus }: ImportModalProps) {
   const [file, setFile] = useState<File | null>(null);

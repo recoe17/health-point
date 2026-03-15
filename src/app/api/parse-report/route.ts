@@ -118,16 +118,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Daily Revenue & COGS.xlsx: Revenue = cell K23, COGS = column E + G from Total row
+    // Daily Revenue.xlsx: Revenue = K23, COGS = Total row E+G, chart = location vs K, + number admissions, theater cases, theater minutes
     const isDailyRevenueCogsFile =
-      reportType === "daily" &&
-      file.name.toLowerCase().includes("revenue") &&
-      file.name.toLowerCase().includes("cogs");
-    if (isDailyRevenueCogsFile && rows.length > 0) {
-      const k23Cell = (sheet as XLSX.WorkSheet)["K23"] as XLSX.CellObject | undefined;
-      const revenue = k23Cell != null ? parseNum(k23Cell.v) : 0;
-
+      reportType === "daily" && file.name.toLowerCase().includes("revenue");
+    if (isDailyRevenueCogsFile) {
       const rowArray = rows as unknown[][];
+      const colK = 10;
+      const colA = 0;
+      const colB = 1;
+
+      let revenue = 0;
+      for (const sheetName of workbook.SheetNames) {
+        const ws = workbook.Sheets[sheetName] as XLSX.WorkSheet;
+        const cell = ws["K23"] as XLSX.CellObject | undefined;
+        const v = cell != null ? parseNum(cell.v) : 0;
+        if (v !== 0) {
+          revenue = v;
+          break;
+        }
+        const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][];
+        if (sheetRows.length >= 23) {
+          const row23 = sheetRows[22];
+          const fromRow = Array.isArray(row23) ? parseNum(row23[colK]) : 0;
+          if (fromRow !== 0) {
+            revenue = fromRow;
+            break;
+          }
+        }
+      }
+
       const totalRowIndex = rowArray.findIndex((r) => {
         for (let c = 0; c <= 4; c++) {
           const label = String(r[c] ?? "").trim().toLowerCase();
@@ -144,9 +163,39 @@ export async function POST(request: NextRequest) {
           + (gCell != null ? parseNum(gCell.v) : parseNum(rowArray[totalRowIndex]?.[6]));
       }
 
+      const revenueByLocation: { name: string; value: number }[] = [];
+      const totalLabel = new Set(["total", "total:", "total ", "subtotal", "grand total"]);
+      for (let r = 0; r < rowArray.length; r++) {
+        const row = rowArray[r];
+        if (!Array.isArray(row)) continue;
+        const label = String(row[colA] ?? row[colB] ?? "").trim();
+        if (!label || totalLabel.has(label.toLowerCase())) continue;
+        const val = parseNum(row[colK]);
+        if (val === 0) continue;
+        revenueByLocation.push({ name: label, value: val });
+      }
+
+      const findMetric = (keywords: string[]): number => {
+        for (const row of rowArray) {
+          if (!Array.isArray(row)) continue;
+          const label = String(row[colA] ?? row[colB] ?? "").trim().toLowerCase();
+          if (!label) continue;
+          const match = keywords.some((k) => label.includes(k));
+          if (match) return parseNum(row[colK]);
+        }
+        return 0;
+      };
+      const numberAdmissions = findMetric(["number admissions", "admissions", "no. admissions"]);
+      const theaterCases = findMetric(["theater cases", "theatre cases", "theater case"]);
+      const theaterMinutes = findMetric(["theater minutes", "theatre minutes", "theater minute"]);
+
       return NextResponse.json({
         revenue: fmt(revenue),
         cogs: fmt(cogs),
+        revenueByLocation,
+        numberAdmissions: String(numberAdmissions),
+        theaterCases: String(theaterCases),
+        theaterMinutes: String(theaterMinutes),
       });
     }
 
