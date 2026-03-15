@@ -164,15 +164,15 @@ export async function POST(request: NextRequest) {
       }
 
       const revenueByLocation: { name: string; value: number }[] = [];
-      const totalLabel = new Set(["total", "total:", "total ", "subtotal", "grand total"]);
-      for (let r = 0; r < rowArray.length; r++) {
+      for (let r = 10; r <= 19; r++) {
         const row = rowArray[r];
-        if (!Array.isArray(row)) continue;
-        const label = String(row[colA] ?? row[colB] ?? "").trim();
-        if (!label || totalLabel.has(label.toLowerCase())) continue;
-        const val = parseNum(row[colK]);
-        if (val === 0) continue;
-        revenueByLocation.push({ name: label, value: val });
+        if (!Array.isArray(row)) {
+          revenueByLocation.push({ name: "", value: 0 });
+          continue;
+        }
+        const name = String(row[colA] ?? row[colB] ?? "").trim();
+        const value = parseNum(row[colK]);
+        revenueByLocation.push({ name: name || `Row ${r + 1}`, value });
       }
 
       const findMetric = (keywords: string[]): number => {
@@ -185,9 +185,9 @@ export async function POST(request: NextRequest) {
         }
         return 0;
       };
-      const numberAdmissions = findMetric(["number admissions", "admissions", "no. admissions"]);
-      const theaterCases = findMetric(["theater cases", "theatre cases", "theater case"]);
-      const theaterMinutes = findMetric(["theater minutes", "theatre minutes", "theater minute"]);
+      const numberAdmissions = findMetric(["admissions", "number admissions", "no. admissions"]);
+      const theaterCases = findMetric(["theatre cases", "theater cases", "theatre case"]);
+      const theaterMinutes = findMetric(["theatre minutes", "theater minutes", "theatre minute"]);
 
       return NextResponse.json({
         revenue: fmt(revenue),

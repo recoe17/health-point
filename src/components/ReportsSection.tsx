@@ -251,9 +251,9 @@ export default function ReportsSection() {
         const tm = importedDaily.theaterMinutes as string | undefined;
         if (na !== undefined || tc !== undefined || tm !== undefined) {
           items = [
-            { label: "Number admissions", value: na ?? "—" },
-            { label: "Theater cases", value: tc ?? "—" },
-            { label: "Theater minutes", value: tm ?? "—" },
+            { label: "Admissions", value: na ?? "—" },
+            { label: "Theatre Cases", value: tc ?? "—" },
+            { label: "Theatre Minutes", value: tm ?? "—" },
           ];
         }
       }
