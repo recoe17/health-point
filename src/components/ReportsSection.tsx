@@ -249,7 +249,10 @@ export default function ReportsSection() {
             : item.value;
       let items = item.items;
       let chartData: { name: string; value: number }[] | undefined = item.chartData;
-      if (item.id === "capex" && Array.isArray(importedMonthly.capexItems)) {
+      if (item.id === "debtors" || item.id === "creditors" || item.id === "inventory") {
+        items = [];
+        chartData = undefined;
+      } else if (item.id === "capex" && Array.isArray(importedMonthly.capexItems)) {
         items = importedMonthly.capexItems as { label: string; value: string }[];
         chartData = undefined;
       } else if (item.id === "loan-movement" && Array.isArray(importedMonthly.loanMovementItems)) {
@@ -259,7 +262,9 @@ export default function ReportsSection() {
         items = importedMonthly.incomeStatementItems as { label: string; value: string }[];
         chartData = undefined;
       }
-      return { ...item, value, items, chartData };
+      const description =
+        item.id === "debtors" || item.id === "creditors" || item.id === "inventory" ? "" : item.description;
+      return { ...item, value, items, chartData, description };
     },
     [importedMonthly]
   );
@@ -545,13 +550,12 @@ export default function ReportsSection() {
             <div className="flex-1 space-y-2">
               {MONTHLY_ITEMS.map((item) => {
                 const merged = mergeMonthlyItem(item);
-                const tileOnly = item.id === "debtors" || item.id === "creditors" || item.id === "inventory";
                 return (
                   <MetricCard
                     key={item.id}
                     label={merged.label}
                     value={merged.value}
-                    onClick={tileOnly ? undefined : (e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       openMetricDetail(merged);
                     }}
