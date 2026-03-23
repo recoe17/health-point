@@ -239,11 +239,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Daily Revenue.xlsx: Revenue = K23, COGS = Total row E+G, chart = location vs K, + number admissions, theater cases, theater minutes
+    // Daily Revenue.xlsx: Revenue = J20, COGS = Total row E+G, chart = location vs J11:J18, + number admissions, theater cases, theater minutes
     const isDailyRevenueCogsFile =
       reportType === "daily" && file.name.toLowerCase().includes("revenue");
     if (isDailyRevenueCogsFile) {
-      const colK = 10;
+      const colJ = 9;
       const colA = 0;
       const colB = 1;
       const fmtCount = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       let revenueSheet: XLSX.WorkSheet = sheet as XLSX.WorkSheet;
       for (const sheetName of workbook.SheetNames) {
         const ws = workbook.Sheets[sheetName] as XLSX.WorkSheet;
-        const cell = ws["K23"] as XLSX.CellObject | undefined;
+        const cell = ws["J20"] as XLSX.CellObject | undefined;
         const v = cell != null ? parseNum(cell.v) : 0;
         if (v !== 0) {
           revenue = v;
@@ -260,9 +260,9 @@ export async function POST(request: NextRequest) {
           break;
         }
         const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][];
-        if (sheetRows.length >= 23) {
-          const row23 = sheetRows[22];
-          const fromRow = Array.isArray(row23) ? parseNum(row23[colK]) : 0;
+        if (sheetRows.length >= 20) {
+          const row20 = sheetRows[19];
+          const fromRow = Array.isArray(row20) ? parseNum(row20[colJ]) : 0;
           if (fromRow !== 0) {
             revenue = fromRow;
             revenueSheet = ws;
@@ -290,14 +290,14 @@ export async function POST(request: NextRequest) {
 
       const chartRows = XLSX.utils.sheet_to_json<unknown[]>(revenueSheet, { header: 1 }) as unknown[][];
       const revenueByLocation: { name: string; value: number }[] = [];
-      for (let r = 10; r <= 19; r++) {
+      for (let r = 10; r <= 17; r++) {
         const row = chartRows[r];
         if (!Array.isArray(row)) {
           revenueByLocation.push({ name: `Row ${r + 1}`, value: 0 });
           continue;
         }
         const name = String(row[colA] ?? row[colB] ?? "").trim();
-        const value = parseNum(row[colK]);
+        const value = parseNum(row[colJ]);
         revenueByLocation.push({ name: name || `Row ${r + 1}`, value });
       }
 
@@ -310,9 +310,9 @@ export async function POST(request: NextRequest) {
         const colIndex = cellRef.charCodeAt(0) - 65;
         return parseNum(row23[colIndex]);
       };
-      const numberAdmissions = readCell(revenueSheet as XLSX.WorkSheet, "L23");
-      const theaterCases = readCell(revenueSheet as XLSX.WorkSheet, "N23");
-      const theaterMinutes = readCell(revenueSheet as XLSX.WorkSheet, "O23");
+      const numberAdmissions = readCell(revenueSheet as XLSX.WorkSheet, "K20");
+      const theaterCases = readCell(revenueSheet as XLSX.WorkSheet, "L20");
+      const theaterMinutes = readCell(revenueSheet as XLSX.WorkSheet, "M20");
 
       const revenueCategoryItems = [
         { label: "Ward Fees", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "B20")) },
