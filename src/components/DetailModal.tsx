@@ -22,6 +22,8 @@ interface DetailModalProps {
   chartData?: { name: string; value: number; fill?: string }[];
   chartType?: "bar" | "line";
   items?: { label: string; value: string }[];
+  tableColumns?: string[];
+  tableRows?: string[][];
 }
 
 export default function DetailModal({
@@ -33,6 +35,8 @@ export default function DetailModal({
   chartData,
   chartType = "bar",
   items,
+  tableColumns,
+  tableRows,
 }: DetailModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -50,11 +54,11 @@ export default function DetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+        className="w-full max-w-2xl max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
           <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-900/95 px-6 py-4">
@@ -111,6 +115,32 @@ export default function DetailModal({
                   <span className="font-semibold text-slate-100">{item.value}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {tableColumns && tableRows && tableRows.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-slate-700">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-800">
+                  <tr>
+                    {tableColumns.map((col) => (
+                      <th key={col} className="px-3 py-2 text-left font-semibold text-slate-200">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableRows.map((row, i) => (
+                    <tr key={i} className="border-t border-slate-700">
+                      {row.map((cell, j) => (
+                        <td key={`${i}-${j}`} className="px-3 py-2 text-slate-300">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

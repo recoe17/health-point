@@ -203,6 +203,14 @@ const DAILY_ITEMS = [
       { label: "Overhead", value: "$3.8K" },
     ],
   },
+  {
+    id: "turnover-medical-funder",
+    label: "Turnover by Medical Funder",
+    value: "$309K | 567 patients",
+    description: "Daily turnover and patient counts by medical funder.",
+    chartData: [],
+    items: [],
+  },
 ];
 
 type DetailModalItem =
@@ -213,7 +221,7 @@ export default function ReportsSection() {
   const [modalItem, setModalItem] = useState<DetailModalItem | null>(null);
   const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily-cash" | "daily-revenue-cogs" | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState<"monthly" | "daily-cash" | "daily-revenue-cogs" | "daily-turnover-funder" | null>(null);
   const [importedMonthly, setImportedMonthly] = useState<Record<string, unknown>>({});
   const [importedDaily, setImportedDaily] = useState<Record<string, unknown>>({});
 
@@ -254,6 +262,8 @@ export default function ReportsSection() {
       const value = (importedDaily[item.id] as string | undefined) ?? item.value;
       let items = item.items;
       let chartData: { name: string; value: number }[] | undefined = item.chartData;
+      let tableColumns: string[] | undefined;
+      let tableRows: string[][] | undefined;
 
       if (item.id === "cash-usd" && Array.isArray(importedDaily.cashUsdBanks) && importedDaily.cashUsdBanks.length > 0) {
         items = (importedDaily.cashUsdBanks as { name: string; value: string }[]).map((b) => ({ label: b.name, value: b.value }));
@@ -266,21 +276,73 @@ export default function ReportsSection() {
         } else {
           chartData = undefined;
         }
+
+        const revenueCategoryItems = importedDaily.revenueCategoryItems as { label: string; value: string }[] | undefined;
+        const admissionsItems = importedDaily.numberAdmissionsItems as { label: string; value: string }[] | undefined;
+        const theatreCasesItems = importedDaily.theaterCasesItems as { label: string; value: string }[] | undefined;
+        const theatreMinutesItems = importedDaily.theaterMinutesItems as { label: string; value: string }[] | undefined;
         const na = importedDaily.numberAdmissions as string | undefined;
         const tc = importedDaily.theaterCases as string | undefined;
         const tm = importedDaily.theaterMinutes as string | undefined;
-        if (na !== undefined || tc !== undefined || tm !== undefined) {
-          items = [
-            { label: "Admissions", value: na ?? "—" },
-            { label: "Theatre Cases", value: tc ?? "—" },
-            { label: "Theatre Minutes", value: tm ?? "—" },
-          ];
+        if (
+          (Array.isArray(revenueCategoryItems) && revenueCategoryItems.length > 0)
+          || na !== undefined
+          || tc !== undefined
+          || tm !== undefined
+          || (Array.isArray(admissionsItems) && admissionsItems.length > 0)
+          || (Array.isArray(theatreCasesItems) && theatreCasesItems.length > 0)
+          || (Array.isArray(theatreMinutesItems) && theatreMinutesItems.length > 0)
+        ) {
+          const nextItems: { label: string; value: string }[] = [];
+          if (Array.isArray(revenueCategoryItems)) {
+            nextItems.push(...revenueCategoryItems);
+          }
+          if (na !== undefined || tc !== undefined || tm !== undefined) {
+            nextItems.push(
+              { label: "Admissions (Total)", value: na ?? "—" },
+              { label: "Theatre Cases (Total)", value: tc ?? "—" },
+              { label: "Theatre Minutes (Total)", value: tm ?? "—" }
+            );
+          }
+          if (Array.isArray(admissionsItems)) {
+            nextItems.push(...admissionsItems.map((x) => ({ label: `Admissions - ${x.label}`, value: x.value })));
+          }
+          if (Array.isArray(theatreCasesItems)) {
+            nextItems.push(...theatreCasesItems.map((x) => ({ label: `Theatre Cases - ${x.label}`, value: x.value })));
+          }
+          if (Array.isArray(theatreMinutesItems)) {
+            nextItems.push(...theatreMinutesItems.map((x) => ({ label: `Theatre Minutes - ${x.label}`, value: x.value })));
+          }
+          items = nextItems;
+        }
+      } else if (item.id === "turnover-medical-funder") {
+        chartData = undefined;
+        const rows = importedDaily.turnoverMedicalFunderRows as
+          | { label: string; turnover: string; percentage: string; patients: string }[]
+          | undefined;
+        if (Array.isArray(rows) && rows.length > 0) {
+          tableColumns = ["Narration", "Turnover", "Percentage", "Patients"];
+          tableRows = rows.map((r) => [r.label, r.turnover, r.percentage, r.patients]);
+          items = [];
+        } else {
+          items = [];
         }
       }
 
-      const noChart = item.id === "cash-usd" || item.id === "cash-zwg" || item.id === "cogs";
+      const noChart =
+        item.id === "cash-usd"
+        || item.id === "cash-zwg"
+        || item.id === "cogs"
+        || item.id === "turnover-medical-funder";
       const cogsOnlyTotal = item.id === "cogs" ? [] : items;
-      return { ...item, value, items: cogsOnlyTotal, chartData: noChart ? undefined : chartData };
+      return {
+        ...item,
+        value,
+        items: cogsOnlyTotal,
+        chartData: noChart ? undefined : chartData,
+        tableColumns,
+        tableRows,
+      };
     },
     [importedDaily]
   );
@@ -378,9 +440,42 @@ export default function ReportsSection() {
         revenue: data.revenue,
         cogs: data.cogs,
         revenueByLocation: data.revenueByLocation,
+        revenueCategoryItems: data.revenueCategoryItems,
         numberAdmissions: data.numberAdmissions,
         theaterCases: data.theaterCases,
         theaterMinutes: data.theaterMinutes,
+        numberAdmissionsItems: data.numberAdmissionsItems,
+        theaterCasesItems: data.theaterCasesItems,
+        theaterMinutesItems: data.theaterMinutesItems,
+      };
+      setImportedDaily(next);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("healthpoint-daily", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+      }
+      try {
+        await fetch("/api/reports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "daily", data: next }),
+        });
+      } catch {
+        // ignore if DB not configured
+      }
+    },
+    [importedDaily]
+  );
+
+  const handleImportDailyTurnoverFunder = useCallback(
+    async (data: Record<string, unknown>) => {
+      const next = {
+        ...importedDaily,
+        "turnover-medical-funder": data["turnover-medical-funder"],
+        turnoverMedicalFunderPatients: data.turnoverMedicalFunderPatients,
+        turnoverMedicalFunderRows: data.turnoverMedicalFunderRows,
       };
       setImportedDaily(next);
       if (typeof window !== "undefined") {
@@ -528,6 +623,33 @@ export default function ReportsSection() {
                 >
                   Import (Revenue & COGS)
                 </button>
+                <div className="mt-3">
+                  {DAILY_ITEMS.filter((i) => i.id === "turnover-medical-funder").map((item) => {
+                    const merged = mergeDailyItem(item);
+                    return (
+                      <MetricCard
+                        key={item.id}
+                        label={merged.label}
+                        value={merged.value}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMetricDetail(merged);
+                        }}
+                        accentColor="text-white"
+                      />
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImportModalOpen("daily-turnover-funder");
+                    }}
+                    className="mt-3 w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition"
+                  >
+                    Import (Turnover by Medical Funder)
+                  </button>
+                </div>
               </div>
             </div>
           </button>
@@ -561,6 +683,7 @@ export default function ReportsSection() {
           { label: "Cash (ZWG)", value: (importedDaily["cash-zwg"] as string) ?? "ZWG 380K" },
           { label: "Revenue", value: (importedDaily.revenue as string) ?? "$78.5K" },
           { label: "COGS", value: (importedDaily.cogs as string) ?? "$29.8K" },
+          { label: "Turnover by Medical Funder", value: (importedDaily["turnover-medical-funder"] as string) ?? "$309K | 567 patients" },
         ]}
       />
 
@@ -574,6 +697,8 @@ export default function ReportsSection() {
           chartData={modalItem.chartData}
           chartType={("chartType" in modalItem ? modalItem.chartType : "bar") ?? "bar"}
           items={modalItem.items}
+          tableColumns={("tableColumns" in modalItem ? (modalItem.tableColumns as string[] | undefined) : undefined)}
+          tableRows={("tableRows" in modalItem ? (modalItem.tableRows as string[][] | undefined) : undefined)}
         />
       )}
 
@@ -601,6 +726,15 @@ export default function ReportsSection() {
           reportType="daily"
           onImport={handleImportDailyRevenueCogs}
           dailyFocus="revenue-cogs"
+        />
+      )}
+      {importModalOpen === "daily-turnover-funder" && (
+        <ImportModal
+          isOpen
+          onClose={() => setImportModalOpen(null)}
+          reportType="daily"
+          onImport={handleImportDailyTurnoverFunder}
+          dailyFocus="turnover-funder"
         />
       )}
     </>

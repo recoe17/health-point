@@ -57,6 +57,23 @@ function extractBankBreakdownBySections(
   };
 }
 
+function parseSheetDate(name: string): number | null {
+  const monthMap: Record<string, number> = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  };
+  // Matches examples like: "13 Mar 26", "13-Mar-26", "13 Mar '26"
+  const m = name.match(/(\d{1,2})[\s\-_/]+([A-Za-z]{3,9})[\s\-_/']+(\d{2,4})/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const mon = monthMap[m[2].slice(0, 3).toLowerCase()];
+  let year = Number(m[3]);
+  if (Number.isNaN(day) || mon == null || Number.isNaN(year)) return null;
+  if (year < 100) year += 2000;
+  const t = new Date(year, mon, day).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -81,9 +98,20 @@ export async function POST(request: NextRequest) {
     let cashSheet: XLSX.WorkSheet = sheet;
     let monthlySheetName: string | undefined;
     if (reportType === "daily") {
-      monthlySheetName = workbook.SheetNames.find((name) =>
+      const monthlyTxSheets = workbook.SheetNames.filter((name) =>
         name.toLowerCase().includes("monthly transactions")
       );
+      if (monthlyTxSheets.length > 0) {
+        monthlySheetName = monthlyTxSheets[0];
+        let bestDate = -1;
+        for (const name of monthlyTxSheets) {
+          const t = parseSheetDate(name);
+          if (t != null && t > bestDate) {
+            bestDate = t;
+            monthlySheetName = name;
+          }
+        }
+      }
       if (monthlySheetName) {
         cashSheet = workbook.Sheets[monthlySheetName];
       }
@@ -106,17 +134,20 @@ export async function POST(request: NextRequest) {
     // Monthly report: e.g. "HealthPoint Financial Statements - February 2026.xlsx"
     // Sheets: Financial Positions, CAPEX, Indirect Cashflow, YTD Summarised P&L
     if (reportType === "monthly") {
-      const findSheet = (name: string) =>
-        workbook.SheetNames.find((n) => n.toLowerCase().includes(name.toLowerCase()));
+      const findSheet = (...names: string[]) =>
+        workbook.SheetNames.find((n) => {
+          const lower = n.toLowerCase();
+          return names.some((name) => lower.includes(name.toLowerCase()));
+        });
       const getCellFmt = (ws: XLSX.WorkSheet, ref: string) =>
         fmt(parseNum((ws[ref] as XLSX.CellObject | undefined)?.v ?? 0));
       const getCellLabel = (ws: XLSX.WorkSheet, ref: string): string =>
         String((ws[ref] as XLSX.CellObject | undefined)?.v ?? "").trim();
 
-      const fpSheet = findSheet("Financial Positions");
+      const fpSheet = findSheet("Financial Positions", "Financial Position");
       const capexSheet = findSheet("CAPEX");
       const cashflowSheet = findSheet("Indirect Cashflow");
-      const ytdSheet = findSheet("YTD Summarised P&L") ?? findSheet("YTD");
+      const ytdSheet = findSheet("YTD Summarised P&L", "YTD");
 
       const monthlyParsed: Record<string, unknown> = {};
       if (fpSheet) {
@@ -183,6 +214,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Turnover by Medical Funder.xlsx
+    const isTurnoverByMedicalFunderFile =
+      reportType === "daily" && file.name.toLowerCase().includes("turnover by medical funder");
+    if (isTurnoverByMedicalFunderFile) {
+      const ws = sheet as XLSX.WorkSheet;
+      const read = (ref: string) => parseNum((ws[ref] as XLSX.CellObject | undefined)?.v ?? 0);
+      const percentage = (n: number) => (n <= 1 ? `${(n * 100).toFixed(2)}%` : `${n.toFixed(2)}%`);
+      const patients = Math.round(read("D37"));
+      const rowsOut: { label: string; turnover: string; percentage: string; patients: string }[] = [];
+      for (let r = 13; r <= 35; r++) {
+        const label = String((ws[`A${r}`] as XLSX.CellObject | undefined)?.v ?? "").trim() || `Row ${r}`;
+        rowsOut.push({
+          label,
+          turnover: fmt(read(`B${r}`)),
+          percentage: percentage(read(`C${r}`)),
+          patients: String(Math.round(read(`D${r}`))),
+        });
+      }
+      return NextResponse.json({
+        "turnover-medical-funder": `${fmt(read("B37"))} | ${patients.toLocaleString()} patients`,
+        turnoverMedicalFunderPatients: String(patients),
+        turnoverMedicalFunderRows: rowsOut,
+      });
+    }
+
     // Daily Revenue.xlsx: Revenue = K23, COGS = Total row E+G, chart = location vs K, + number admissions, theater cases, theater minutes
     const isDailyRevenueCogsFile =
       reportType === "daily" && file.name.toLowerCase().includes("revenue");
@@ -190,6 +246,7 @@ export async function POST(request: NextRequest) {
       const colK = 10;
       const colA = 0;
       const colB = 1;
+      const fmtCount = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
       let revenue = 0;
       let revenueSheet: XLSX.WorkSheet = sheet as XLSX.WorkSheet;
@@ -253,17 +310,50 @@ export async function POST(request: NextRequest) {
         const colIndex = cellRef.charCodeAt(0) - 65;
         return parseNum(row23[colIndex]);
       };
-      const numberAdmissions = readCell(sheet as XLSX.WorkSheet, "L23");
-      const theaterCases = readCell(sheet as XLSX.WorkSheet, "N23");
-      const theaterMinutes = readCell(sheet as XLSX.WorkSheet, "O23");
+      const numberAdmissions = readCell(revenueSheet as XLSX.WorkSheet, "L23");
+      const theaterCases = readCell(revenueSheet as XLSX.WorkSheet, "N23");
+      const theaterMinutes = readCell(revenueSheet as XLSX.WorkSheet, "O23");
+
+      const revenueCategoryItems = [
+        { label: "Ward Fees", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "B20")) },
+        { label: "Theatre Fees", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "C20")) },
+        { label: "Ethicals", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "D20")) },
+        { label: "Surgicals", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "F20")) },
+        { label: "Equipment", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "H20")) },
+        { label: "Other", value: fmt(readCell(revenueSheet as XLSX.WorkSheet, "I20")) },
+      ];
+
+      const numberAdmissionsItems: { label: string; value: string }[] = [];
+      const theaterCasesItems: { label: string; value: string }[] = [];
+      const theaterMinutesItems: { label: string; value: string }[] = [];
+      for (let r = 11; r <= 18; r++) {
+        const labelCell = (revenueSheet as XLSX.WorkSheet)[`A${r}`] as XLSX.CellObject | undefined;
+        const label = String(labelCell?.v ?? "").trim() || `Row ${r}`;
+        numberAdmissionsItems.push({
+          label,
+          value: fmtCount(readCell(revenueSheet as XLSX.WorkSheet, `K${r}`)),
+        });
+        theaterCasesItems.push({
+          label,
+          value: fmtCount(readCell(revenueSheet as XLSX.WorkSheet, `L${r}`)),
+        });
+        theaterMinutesItems.push({
+          label,
+          value: fmtCount(readCell(revenueSheet as XLSX.WorkSheet, `M${r}`)),
+        });
+      }
 
       return NextResponse.json({
         revenue: fmt(revenue),
         cogs: fmt(cogs),
         revenueByLocation,
+        revenueCategoryItems,
         numberAdmissions: String(numberAdmissions),
         theaterCases: String(theaterCases),
         theaterMinutes: String(theaterMinutes),
+        numberAdmissionsItems,
+        theaterCasesItems,
+        theaterMinutesItems,
       });
     }
 

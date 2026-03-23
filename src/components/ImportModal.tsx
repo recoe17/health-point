@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import type { ReportType } from "@/lib/parseImport";
 import { parseFile } from "@/lib/parseImport";
 
-export type DailyImportFocus = "cash" | "revenue-cogs";
+export type DailyImportFocus = "cash" | "revenue-cogs" | "turnover-funder";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -31,9 +31,18 @@ const DAILY_REVENUE_COGS_KEYS = [
   "revenue",
   "cogs",
   "revenueByLocation",
+  "revenueCategoryItems",
   "numberAdmissions",
   "theaterCases",
   "theaterMinutes",
+  "numberAdmissionsItems",
+  "theaterCasesItems",
+  "theaterMinutesItems",
+];
+const DAILY_TURNOVER_FUNDER_KEYS = [
+  "turnover-medical-funder",
+  "turnoverMedicalFunderPatients",
+  "turnoverMedicalFunderRows",
 ];
 
 export default function ImportModal({ isOpen, onClose, reportType, onImport, dailyFocus }: ImportModalProps) {
@@ -42,6 +51,26 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [parsedData, setParsedData] = useState<Record<string, unknown> | null>(null);
+  const lastParsedFileRef = useRef<File | null>(null);
+
+  // For monthly: auto-parse when a file is selected so user doesn't have to click "Parse File"
+  useEffect(() => {
+    if (!isOpen || reportType !== "monthly" || !file || lastParsedFileRef.current === file) return;
+    lastParsedFileRef.current = file;
+    setError(null);
+    setParsedData(null);
+    setLoading(true);
+    parseFile(file, reportType)
+      .then((parsed) => {
+        setParsedData(parsed as Record<string, unknown>);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to parse file.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [isOpen, reportType, file]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -75,7 +104,12 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
     try {
       const parsed = await parseFile(file, reportType) as Record<string, unknown>;
       if (reportType === "daily" && dailyFocus) {
-        const keys = dailyFocus === "cash" ? DAILY_CASH_KEYS : DAILY_REVENUE_COGS_KEYS;
+        const keys =
+          dailyFocus === "cash"
+            ? DAILY_CASH_KEYS
+            : dailyFocus === "turnover-funder"
+              ? DAILY_TURNOVER_FUNDER_KEYS
+              : DAILY_REVENUE_COGS_KEYS;
         const data: Record<string, unknown> = {};
         for (const k of keys) {
           const v = parsed[k];
@@ -102,6 +136,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
   };
 
   const handleClose = () => {
+    lastParsedFileRef.current = null;
     setFile(null);
     setError(null);
     setParsedData(null);
@@ -112,16 +147,16 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/60 backdrop-blur-sm"
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+        className="w-full max-w-md max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-700 px-6 py-4">
           <h2 className="text-lg font-bold text-slate-100">
-            Import {reportType === "monthly" ? "Monthly" : dailyFocus === "cash" ? "Daily (Cash USD / ZWG)" : dailyFocus === "revenue-cogs" ? "Daily (Revenue & COGS)" : "Daily"} Report
+            Import {reportType === "monthly" ? "Monthly" : dailyFocus === "cash" ? "Daily (Cash USD / ZWG)" : dailyFocus === "revenue-cogs" ? "Daily (Revenue & COGS)" : dailyFocus === "turnover-funder" ? "Daily (Turnover by Medical Funder)" : "Daily"} Report
           </h2>
           <button
             onClick={handleClose}
@@ -133,7 +168,7 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
             </svg>
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
           <p className="text-sm text-slate-400">
             Upload Excel (.xlsx, .xls) or CSV. Use column headers or first column as labels. Supported labels:
           </p>
@@ -186,27 +221,35 @@ export default function ImportModal({ isOpen, onClose, reportType, onImport, dai
             </label>
           </div>
           {error && <p className="text-sm text-rose-400">{error}</p>}
-          {parsedData && Object.keys(parsedData).length > 0 && (
+          {parsedData && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/5 p-4">
-              <p className="text-sm font-medium text-red-400 mb-3">Preview — click Update to show latest on dashboard</p>
-              <div className="space-y-2 text-sm">
-                {Object.entries(parsedData)
-                  .filter(([, val]) => typeof val === "string" || (Array.isArray(val) && val.length > 0))
-                  .map(([key, val]) => (
-                    <div key={key} className="flex justify-between text-slate-300">
-                      <span className="capitalize">{key.replace(/-/g, " ")}</span>
-                      <span className="font-semibold text-slate-100">
-                        {Array.isArray(val)
-                          ? `${(val as { name: string; value: string }[]).length} bank(s)`
-                          : String(val)}
-                      </span>
-                    </div>
-                  ))}
-              </div>
+              {Object.keys(parsedData).length > 0 ? (
+                <>
+                  <p className="text-sm font-medium text-red-400 mb-3">Preview — click Update Dashboard below to apply</p>
+                  <div className="space-y-2 text-sm">
+                    {Object.entries(parsedData)
+                      .filter(([, val]) => typeof val === "string" || (Array.isArray(val) && val.length > 0))
+                      .map(([key, val]) => (
+                        <div key={key} className="flex justify-between text-slate-300">
+                          <span className="capitalize">{key.replace(/-/g, " ")}</span>
+                          <span className="font-semibold text-slate-100">
+                            {Array.isArray(val)
+                              ? `${(val as { label?: string; value?: string; name?: string }[]).length} item(s)`
+                              : String(val)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No data found in expected sheets. Ensure the workbook has: Financial Positions, CAPEX, Indirect Cashflow, YTD Summarised P&amp;L. You can still click Update Dashboard to continue.
+                </p>
+              )}
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-700 px-6 py-4">
+        <div className="flex shrink-0 flex-col sm:flex-row justify-end gap-3 border-t border-slate-700 px-6 py-4">
           <button
             onClick={handleClose}
             className="rounded-lg px-4 py-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition order-2 sm:order-1"
