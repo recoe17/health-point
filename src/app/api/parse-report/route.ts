@@ -146,8 +146,9 @@ export async function POST(request: NextRequest) {
 
       const fpSheet = findSheet("Financial Positions", "Financial Position");
       const capexSheet = findSheet("CAPEX");
-      const cashflowSheet = findSheet("Indirect Cashflow");
-      const ytdSheet = findSheet("YTD Summarised P&L", "YTD");
+      const cashflowSheet = findSheet("Indirect Cashflow", "Indirect Cash Flow");
+      // Prefer "YTD Summarised P&L" over "YTD TB" (both contain "YTD")
+      const ytdSheet = findSheet("YTD Summarised P&L") ?? findSheet("YTD Summarised") ?? findSheet("YTD");
 
       const monthlyParsed: Record<string, unknown> = {};
       if (fpSheet) {
