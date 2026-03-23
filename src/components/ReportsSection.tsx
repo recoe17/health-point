@@ -218,6 +218,13 @@ type DetailModalItem =
   | (Omit<(typeof DAILY_ITEMS)[0], "chartData"> & { chartData?: { name: string; value: number }[] });
 
 export default function ReportsSection() {
+  const previousMonthLabel = (() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    return d.toLocaleString("en-US", { month: "long", year: "numeric" });
+  })();
+
   const [modalItem, setModalItem] = useState<DetailModalItem | null>(null);
   const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
@@ -512,7 +519,7 @@ export default function ReportsSection() {
                 <h2 className="text-xl font-bold tracking-tight group-hover:text-white transition">
                   Monthly Report
                 </h2>
-                <p className="text-sm text-red-100/90 mt-1">Financial summary for March 2025</p>
+                <p className="text-sm text-red-100/90 mt-1">Financial summary for {previousMonthLabel}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -538,12 +545,13 @@ export default function ReportsSection() {
             <div className="flex-1 space-y-2">
               {MONTHLY_ITEMS.map((item) => {
                 const merged = mergeMonthlyItem(item);
+                const tileOnly = item.id === "debtors" || item.id === "creditors" || item.id === "inventory";
                 return (
                   <MetricCard
                     key={item.id}
                     label={merged.label}
                     value={merged.value}
-                    onClick={(e) => {
+                    onClick={tileOnly ? undefined : (e) => {
                       e.stopPropagation();
                       openMetricDetail(merged);
                     }}
