@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       return Number.isNaN(n) ? 0 : n;
     };
     const fmt = (n: number) =>
-      Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
+      Math.abs(n) >= 1e6 ? `$${Math.round(n / 1e6)}M` : Math.abs(n) >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`;
 
     // Monthly report: e.g. "HealthPoint Financial Statements - February 2026.xlsx"
     // Sheets: Financial Positions, CAPEX, Indirect Cashflow, YTD Summarised P&L
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     if (isTurnoverByMedicalFunderFile) {
       const ws = sheet as XLSX.WorkSheet;
       const read = (ref: string) => parseNum((ws[ref] as XLSX.CellObject | undefined)?.v ?? 0);
-      const percentage = (n: number) => (n <= 1 ? `${(n * 100).toFixed(2)}%` : `${n.toFixed(2)}%`);
+      const percentage = (n: number) => (n <= 1 ? `${Math.round(n * 100)}%` : `${Math.round(n)}%`);
       const patients = Math.round(read("D37"));
       const rowsOut: { label: string; turnover: string; percentage: string; patients: string }[] = [];
       for (let r = 13; r <= 35; r++) {
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
       const colJ = 9;
       const colA = 0;
       const colB = 1;
-      const fmtCount = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+      const fmtCount = (n: number) => String(Math.round(n));
 
       let revenue = 0;
       let revenueSheet: XLSX.WorkSheet = sheet as XLSX.WorkSheet;
@@ -438,7 +438,7 @@ export async function POST(request: NextRequest) {
       return Number.isNaN(n) ? null : n;
     };
     const fmtNum = (n: number) =>
-      Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
+      Math.abs(n) >= 1e6 ? `$${Math.round(n / 1e6)}M` : Math.abs(n) >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`;
 
     const match = (label: string, map: Record<string, string>) => {
       const k = norm(label);
